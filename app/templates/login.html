@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block title %}Ingresar · LocalMatch{% endblock %}
+{% block content %}
+<div class="center card">
+  <h1>Bienvenido</h1><p class="sub">Ingresa para preseleccionar o revisar candidatos.</p>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <label>Correo</label><input type="email" name="email" required autofocus>
+    <label>Contraseña</label><input type="password" name="password" required>
+    <p><button class="btn" style="width:100%;margin-top:18px">Ingresar</button></p>
+  </form>
+</div>
+{% endblock %}

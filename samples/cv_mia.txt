@@ -1,0 +1,5 @@
+Mia Salazar
+mia.salazar@example.com
+Ingeniera de Sistemas con 2 años de experiencia como analista de reportes.
+Habilidades: SQL, Power BI, Excel, Python, Git. Proyecto: tablero de ventas para una cadena de farmacias.
+Inglés avanzado.

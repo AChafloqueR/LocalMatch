@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block title %}Resultados SUS{% endblock %}
+{% block content %}
+<div class="row"><div class="grow"><h1>Resultados SUS</h1><p class="sub">Puntaje global 0–100 por participante. Promedio de referencia: 68.</p></div>
+<a class="btn" href="/admin/sus.csv">Descargar CSV</a></div>
+<div class="grid">
+{% for p, s in stats.items() %}
+<div class="card"><span class="badge">{{ p }}</span>
+  {% if s.n %}<div class="big">{{ s.mean }}</div><div class="hint">{{ category(s.mean) }} · n = {{ s.n }} · DE = {{ s.sd }} · mín {{ s.min }} · máx {{ s.max }}</div>
+  {% else %}<p class="hint">Sin respuestas todavía.</p>{% endif %}</div>
+{% endfor %}</div>
+<div class="card">
+<table><tr><th>Participante</th><th>Perfil</th><th>SUS</th><th>Categoría</th><th>Experiencia con IA</th></tr>
+{% for r in rows %}<tr><td>P{{ '%03d'|format(loop.index) }}</td><td>{{ r.profile }}</td><td><b>{{ r.score }}</b></td><td>{{ category(r.score) }}</td><td>{{ r.experience }}</td></tr>
+{% else %}<tr><td colspan="5" class="empty">Aún no hay respuestas.</td></tr>{% endfor %}</table></div>
+<p class="hint">Para el análisis inferencial (Shapiro-Wilk, Levene y t de Welch) usa <code>analysis/sus_analysis.py</code> con el CSV descargado.</p>
+{% endblock %}

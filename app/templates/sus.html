@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block title %}Evaluación SUS{% endblock %}
+{% block content %}
+<h1>Evaluación de usabilidad</h1>
+<p class="sub">Cuestionario System Usability Scale (SUS) · Perfil: {{ profile }}</p>
+{% if done %}
+<div class="card empty"><div class="big">¡Gracias!</div><p>Tu evaluación ya fue registrada. Puedes cerrar esta página.</p></div>
+{% else %}
+<form class="card" method="post" action="/sus">
+  <p class="hint">Después de usar LocalMatch en una tarea real, indica qué tan de acuerdo estás con cada afirmación: 1 = totalmente en desacuerdo, 5 = totalmente de acuerdo.</p>
+  {% for t in items %}{% set i = loop.index %}
+  <div class="likert"><div><b>{{ i }}.</b> {{ t }}</div>
+    <div class="opts">{% for n in range(1,6) %}<label><input type="radio" name="q{{ i }}" value="{{ n }}" required>{{ n }}</label>{% endfor %}</div></div>
+  {% endfor %}
+  <label>¿Cuánta experiencia tienes con herramientas de IA en tu trabajo?</label>
+  <select name="experience"><option>Ninguna</option><option>Poca</option><option>Media</option><option>Mucha</option></select>
+  <label>Comentario <span class="hint">(opcional)</span></label><textarea name="comment"></textarea>
+  <label style="font-weight:500"><input type="checkbox" name="consent" value="1" style="width:auto;margin-right:8px">Acepto participar de forma voluntaria. Mis respuestas se usarán de forma anónima con fines académicos y no se publicará mi identidad.</label>
+  <p><button class="btn">Enviar evaluación</button></p>
+</form>
+{% endif %}
+{% endblock %}

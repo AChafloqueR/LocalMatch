@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}LocalMatch{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head><body>
+<header class="nav"><div class="in">
+  <a class="logo" href="/">Local<span>Match</span></a>
+  {% if user %}
+  <nav class="links">
+    <a href="/dashboard">Inicio</a>
+    {% if user.role == 'reclutador' %}<a href="/vacancies/new">Nueva vacante</a>{% endif %}
+    {% if user.role in ('reclutador','jefe') %}<a href="/sus">Evaluación SUS</a>{% endif %}
+    {% if user.role == 'admin' %}<a href="/admin/sus">Resultados SUS</a>{% endif %}
+  </nav>
+  <span class="who">{{ user.name }} · {{ {'reclutador':'Reclutamiento','jefe':'Jefe de área','admin':'Investigación'}[user.role] }}</span>
+  <form method="post" action="/logout"><button class="btn ghost small">Salir</button></form>
+  {% endif %}
+</div></header>
+<main>
+  {% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+  {% block content %}{% endblock %}
+  <p class="foot">LocalMatch · apoyo a la preselección con supervisión humana · modo del agente: {{ provider }}</p>
+</main>
+</body></html>

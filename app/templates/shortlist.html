@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block title %}{{ v.title }} · candidatos{% endblock %}
+{% block content %}
+<span class="badge">{{ v.area }}</span>
+<h1 style="margin-top:8px">{{ v.title }}</h1>
+<p class="sub">Candidatos propuestos por reclutamiento, anonimizados. La decisión final es tuya.</p>
+{% for c in cands %}
+{% set sc = c.breakdown_json|fromjson %}{% set pr = c.profile_json|fromjson %}
+<div class="card cand">
+  <div class="rank">{{ loop.index }}<small>puesto</small></div>
+  <div>
+    <div class="row"><b>Candidato #{{ c.id }}</b>
+    {% if c.decision %}<span class="badge {{ 'ok' if c.decision=='Entrevistar' else ('warn' if c.decision=='En espera' else 'bad') }}">{{ c.decision }}</span>{% endif %}</div>
+    <div class="bar"><i style="width:{{ c.score or 0 }}%"></i></div><b>{{ c.score }}</b> <span class="hint">de 100 puntos</span>
+    <p style="margin:8px 0">{{ c.explanation }}</p>
+    <div class="chips">{% for t in pr.must_found %}<span>✓ {{ t }}</span>{% endfor %}{% for t in sc.must_missing %}<span class="miss">✗ {{ t }}</span>{% endfor %}</div>
+    {% if c.human_note %}<p class="ev"><b>Nota de reclutamiento:</b> {{ c.human_note }}</p>{% endif %}
+    <details><summary>Ver evidencias del CV</summary>
+      {% for k,e in pr.evidence.items() %}<div class="ev"><b>{{ k }}:</b> {{ e }}</div>{% endfor %}</details>
+    <form method="post" action="/candidates/{{ c.id }}/decision" class="row" style="margin-top:12px">
+      <select name="decision" style="width:auto">{% for d in ['Entrevistar','En espera','Descartar'] %}<option {{ 'selected' if c.decision==d }}>{{ d }}</option>{% endfor %}</select>
+      <input class="grow" type="text" name="decision_note" value="{{ c.decision_note or '' }}" placeholder="Comentario (opcional)">
+      <button class="btn small">Guardar decisión</button></form>
+  </div><div></div>
+</div>
+{% else %}<div class="card empty">Reclutamiento aún no te envió candidatos.</div>{% endfor %}
+{% endblock %}

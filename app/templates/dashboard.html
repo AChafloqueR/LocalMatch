@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block title %}Inicio · LocalMatch{% endblock %}
+{% block content %}
+<h1>Hola, {{ user.name.split()[0] }}</h1>
+<p class="sub">
+{% if user.role == 'reclutador' %}Crea una vacante, sube los CV y deja que el agente proponga un ranking que tú supervisas.
+{% elif user.role == 'jefe' %}Aquí ves los candidatos que el equipo de reclutamiento te envió, con la explicación de cada puntaje.
+{% else %}Panel de investigación: consulta los resultados de la evaluación SUS.{% endif %}</p>
+
+{% if user.role in ('reclutador','jefe') and not sus_done %}
+<div class="card row" style="background:var(--brand-soft);border-color:transparent">
+  <div class="grow"><b>Evalúa la usabilidad de LocalMatch</b><div class="hint">Son 10 afirmaciones y toma unos 3 minutos. Tu respuesta ayuda a un estudio académico.</div></div>
+  <a class="btn" href="/sus">Responder el SUS</a>
+</div>{% endif %}
+
+{% if user.role == 'admin' %}
+<div class="card"><a class="btn" href="/admin/sus">Ver resultados SUS</a></div>
+{% else %}
+<div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">{{ 'Mis vacantes' if user.role=='reclutador' else 'Vacantes asignadas a ti' }}</h2>
+{% if user.role=='reclutador' %}<a class="btn" href="/vacancies/new">+ Nueva vacante</a>{% endif %}</div>
+{% if rows %}<div class="grid">
+{% for v in rows %}
+  <div class="card">
+    <span class="badge">{{ v.area }}</span>
+    <h2 style="margin-top:10px">{{ v.title }}</h2>
+    {% if user.role=='reclutador' %}
+      <p class="hint">{{ v.n }} CV · {{ v.short }} enviados al jefe de área</p>
+      <a class="btn small" href="/vacancies/{{ v.id }}">Abrir vacante</a>
+    {% else %}
+      <p class="hint">{{ v.short }} candidato(s) en tu lista · {{ v.decided }} con decisión</p>
+      <a class="btn small" href="/shortlists/{{ v.id }}">Revisar candidatos</a>
+    {% endif %}
+  </div>
+{% endfor %}</div>
+{% else %}<div class="card empty">Aún no hay vacantes.</div>{% endif %}
+{% endif %}
+{% endblock %}

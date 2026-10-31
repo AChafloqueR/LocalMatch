@@ -1,0 +1,7 @@
+Ana Torres Quispe
+Edad: 26 años
+Correo: ana.torres@example.com | Cel: 987 654 321
+Bachiller en Ingeniería Industrial, Universidad Nacional de Trujillo.
+Experiencia: Analista de datos en logística (2021 - 2025). 4 años de experiencia construyendo reportes y tableros.
+Dominio avanzado de SQL (consultas, vistas), Excel avanzado (tablas dinámicas, Power Query) y Power BI.
+Conocimientos de Python (pandas) y de ERP SAP. Inglés intermedio.
