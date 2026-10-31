@@ -1,0 +1,40 @@
+name: CI
+
+# Corre las pruebas en cada push y en cada pull request.
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lm
+          POSTGRES_PASSWORD: lm
+          POSTGRES_DB: lmtest
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U lm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Pruebas con SQLite
+        run: python -m pytest -q
+      - name: Pruebas con PostgreSQL
+        run: python -m pytest -q
+        env:
+          DATABASE_URL: postgresql://lm:lm@localhost:5432/lmtest

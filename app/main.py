@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import os
+import secrets
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
@@ -10,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import llm
-from .auth import NeedLogin, current_user, require, verify_password
+from .auth import NeedLogin, current_user, hash_password, require, verify_password
 from .db import get_db, init_db
 from .parsing import extract_text
 from .skills.pipeline import run_agent, vacancy_dict
@@ -34,7 +35,19 @@ PROFILE = {"reclutador": "Personal de reclutamiento", "jefe": "Jefes de área"}
 MAX_FILES, MAX_BYTES = 40, 5_000_000
 
 
+def bootstrap_admin():
+    """Crea el usuario de investigación desde ADMIN_EMAIL / ADMIN_PASSWORD (útil en servidores sin consola)."""
+    email, pw = os.getenv("ADMIN_EMAIL", "").strip().lower(), os.getenv("ADMIN_PASSWORD", "")
+    if not email or not pw:
+        return
+    with get_db() as db:
+        if not db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+            db.execute("INSERT INTO users(email,name,role,pw_hash) VALUES(?,?,?,?)",
+                       (email, "Equipo de investigación", "admin", hash_password(pw)))
+
+
 init_db()
+bootstrap_admin()
 
 
 def page(request: Request, name: str, **ctx):
@@ -126,10 +139,9 @@ def vacancy_create(request: Request, title: str = Form(...), area: str = Form(..
                    must: str = Form(""), nice: str = Form(""), min_years: float = Form(0), boss_id: int = Form(...),
                    user=Depends(require("reclutador"))):
     with get_db() as db:
-        cur = db.execute(
+        vid = db.insert(
             "INSERT INTO vacancies(title,area,description,must,nice,min_years,owner_id,boss_id) VALUES(?,?,?,?,?,?,?,?)",
             (title.strip(), area.strip(), description.strip(), must, nice, max(min_years, 0), user["id"], boss_id))
-        vid = cur.lastrowid
     return go(request, f"/vacancies/{vid}", "Vacante creada. Ahora sube los CV.")
 
 
@@ -160,7 +172,7 @@ async def upload(request: Request, vid: int, files: list[UploadFile] = File(...)
             try:
                 if not f.filename or len(data) > MAX_BYTES:
                     raise ValueError
-                text = extract_text(f.filename, data)
+                text = extract_text(f.filename, data).replace("\x00", "")
                 if len(text.strip()) < 30:
                     raise ValueError
             except Exception:
@@ -297,3 +309,52 @@ def admin_sus_csv(user=Depends(require("admin"))):
         w.writerow([f"P{i:03d}", r["profile"], r["score"], category(r["score"]), r["experience"], *json.loads(r["answers"])])
     return Response(buf.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition": "attachment; filename=sus_respuestas.csv"})
+
+
+# ---------- administración de cuentas (sin necesidad de consola) ----------
+def _user_counts():
+    with get_db() as db:
+        rows = db.execute("SELECT role, COUNT(*) AS n FROM users GROUP BY role").fetchall()
+    return {r["role"]: r["n"] for r in rows}
+
+
+@app.get("/admin/users")
+def admin_users(request: Request, user=Depends(require("admin"))):
+    return page(request, "admin_users.html", counts=_user_counts(), created=None)
+
+
+@app.post("/admin/users/one")
+def admin_user_one(request: Request, email: str = Form(...), name: str = Form(...), role: str = Form(...),
+                   user=Depends(require("admin"))):
+    email = email.strip().lower()
+    if role not in ("reclutador", "jefe", "admin") or "@" not in email:
+        raise HTTPException(400, "Datos no válidos.")
+    pw = secrets.token_urlsafe(9)
+    with get_db() as db:
+        if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+            return go(request, "/admin/users", "Ese correo ya existe.")
+        db.execute("INSERT INTO users(email,name,role,pw_hash) VALUES(?,?,?,?)",
+                   (email, name.strip()[:80], role, hash_password(pw)))
+    return page(request, "admin_users.html", counts=_user_counts(), created=(email, pw))
+
+
+@app.post("/admin/users/bulk")
+def admin_users_bulk(role: str = Form(...), count: int = Form(...), user=Depends(require("admin"))):
+    if role not in PROFILE or not 1 <= count <= 100:
+        raise HTTPException(400, "Datos no válidos.")
+    prefix = "rec" if role == "reclutador" else "jef"
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["correo", "contrasena", "rol"])
+    with get_db() as db:
+        for i in range(1, count + 1):
+            email = f"{prefix}{i:02d}@localmatch.local"
+            if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+                continue
+            pw = secrets.token_urlsafe(8)
+            db.execute("INSERT INTO users(email,name,role,pw_hash) VALUES(?,?,?,?)",
+                       (email, f"Participante {prefix.upper()}{i:02d}", role, hash_password(pw)))
+            w.writerow([email, pw, role])
+    return Response(buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename=credenciales_{role}.csv",
+                             "Cache-Control": "no-store"})

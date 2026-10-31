@@ -9,7 +9,7 @@ Python 3.12 · FastAPI · Jinja2 · SQLite (sqlite3 puro) · CSS propio sin fram
 ## Comandos
 - Instalar: `pip install -r requirements-dev.txt`
 - Ejecutar: `uvicorn app.main:app --reload`
-- Pruebas: `pytest -q`  (deben pasar antes de cada commit)
+- Pruebas: `python -m pytest -q`  (deben pasar antes de cada commit)
 - Datos de demo: `python -m scripts.seed --demo`
 
 ## Reglas del proyecto

@@ -27,14 +27,16 @@ def test_sus_valida_entrada():
 
 @pytest.fixture()
 def client(monkeypatch):
-    d = tempfile.mkdtemp()
-    monkeypatch.setenv("DB_PATH", os.path.join(d, "t.db"))
+    # Con DATABASE_URL usa PostgreSQL (CI); si no, un SQLite temporal.
+    if not os.getenv("DATABASE_URL"):
+        monkeypatch.setenv("DB_PATH", os.path.join(tempfile.mkdtemp(), "t.db"))
     monkeypatch.setenv("LLM_PROVIDER", "mock")
     from app.auth import hash_password
-    from app.db import get_db, init_db
+    from app.db import get_db, init_db, reset_db
     from app.main import app
 
     init_db()
+    reset_db()
     with get_db() as db:
         for e, n, r in [("r@t.l", "Rosa Rec", "reclutador"), ("j@t.l", "Julio Jefe", "jefe"), ("a@t.l", "Admin", "admin")]:
             db.execute("INSERT INTO users(email,name,role,pw_hash) VALUES(?,?,?,?)", (e, n, r, hash_password("pw12345")))
@@ -101,3 +103,17 @@ def test_sus_y_admin(client):
 
 def test_acceso_sin_login(client):
     assert client.get("/dashboard", follow_redirects=False).headers["location"] == "/login"
+
+
+def test_admin_crea_participantes(client):
+    c = client
+    login(c, "a@t.l")
+    r = c.post("/admin/users/bulk", data={"role": "jefe", "count": 3})
+    assert r.status_code == 200 and r.text.count("\n") == 4 and "jef01@localmatch.local" in r.text
+    again = c.post("/admin/users/bulk", data={"role": "jefe", "count": 3})
+    assert again.text.count("\n") == 1  # ya existían: solo el encabezado
+    one = c.post("/admin/users/one", data={"email": "x@y.z", "name": "Ana", "role": "reclutador"})
+    assert one.status_code == 200 and "Cuenta creada" in one.text
+    c.post("/logout")
+    login(c, "r@t.l")
+    assert c.get("/admin/users").status_code == 403

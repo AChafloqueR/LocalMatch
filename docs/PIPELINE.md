@@ -7,7 +7,7 @@ Se sigue el proceso de seis etapas del curso, organizado en tres sprints de Scru
 | 1. Análisis de requisitos | Entrevista con el propietario del negocio; lista de requisitos e historias de usuario (ver abajo) | Lista de requisitos, historias de usuario |
 | 2. Diseño | Modelo de datos (`app/db.py`), wireframes de las 5 pantallas, arquitectura de 3 capas | Diagrama del modelo, wireframes, diagrama de arquitectura |
 | 3. Construcción | Sprints 1 y 2, en ramas `feature/*` con revisión entre pares | Capturas del repositorio y del tablero |
-| 4. Pruebas | `pytest -q` + casos manuales por perfil | Matriz de casos de prueba con resultado |
+| 4. Pruebas | `python -m pytest -q` + casos manuales por perfil | Matriz de casos de prueba con resultado |
 | 5. Despliegue | Docker en Render o Railway, usuarios de los 60 participantes | URL pública, manual breve |
 | 6. Evaluación de uso | SUS dentro del sistema (`/sus`), CSV y análisis | Base de respuestas y puntajes |
 

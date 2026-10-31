@@ -11,7 +11,7 @@
     <a href="/dashboard">Inicio</a>
     {% if user.role == 'reclutador' %}<a href="/vacancies/new">Nueva vacante</a>{% endif %}
     {% if user.role in ('reclutador','jefe') %}<a href="/sus">Evaluación SUS</a>{% endif %}
-    {% if user.role == 'admin' %}<a href="/admin/sus">Resultados SUS</a>{% endif %}
+    {% if user.role == 'admin' %}<a href="/admin/sus">Resultados SUS</a><a href="/admin/users">Participantes</a>{% endif %}
   </nav>
   <span class="who">{{ user.name }} · {{ {'reclutador':'Reclutamiento','jefe':'Jefe de área','admin':'Investigación'}[user.role] }}</span>
   <form method="post" action="/logout"><button class="btn ghost small">Salir</button></form>

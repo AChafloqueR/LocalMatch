@@ -20,7 +20,7 @@ uvicorn app.main:app --reload
 ```
 Abre http://127.0.0.1:8000 e ingresa con `reclutadora@localmatch.local` o `jefe@localmatch.local`.
 
-Pruebas: `pytest -q`
+Pruebas: `python -m pytest -q`
 
 ## Modelo de lenguaje (opcional)
 | `LLM_PROVIDER` | Qué hace | Privacidad |
@@ -43,12 +43,18 @@ analysis/sus_analysis.py  Shapiro-Wilk, Levene y t de Welch / Mann-Whitney
 docs/PIPELINE.md       cómo construirlo por sprints, y cómo desplegarlo
 ```
 
+## Base de datos
+Sin configurar nada usa **SQLite** (archivo local). Si defines `DATABASE_URL` usa **PostgreSQL**, que es lo que debes usar al desplegar. Las pruebas corren con ambos motores.
+
+## Despliegue
+Ver `docs/DESPLIEGUE.md` (GitHub → pruebas automáticas → Render → PostgreSQL).
+
 ## Estudio SUS (60 usuarios)
 ```bash
 python -m scripts.create_users --role reclutador --count 30
 python -m scripts.create_users --role jefe --count 30
 ```
-Cada participante entra, usa el sistema en una tarea real y responde `/sus`. Luego, con el usuario `admin`, descarga `/admin/sus.csv` y ejecuta:
+En producción puedes crear las cuentas desde la web (menú *Participantes* del perfil de investigación). Cada participante entra, usa el sistema en una tarea real y responde `/sus`. Luego, con el usuario `admin`, descarga `/admin/sus.csv` y ejecuta:
 ```bash
 python analysis/sus_analysis.py sus_respuestas.csv
 ```

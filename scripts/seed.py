@@ -38,14 +38,14 @@ def main():
             owner = db.execute("SELECT id FROM users WHERE email='reclutadora@localmatch.local'").fetchone()
             boss = db.execute("SELECT id FROM users WHERE email='jefe@localmatch.local'").fetchone()
             if owner and boss and not db.execute("SELECT 1 FROM vacancies").fetchone():
-                cur = db.execute(
+                vid = db.insert(
                     "INSERT INTO vacancies(title,area,description,must,nice,min_years,owner_id,boss_id) VALUES(?,?,?,?,?,?,?,?)",
                     ("Analista de datos junior", "Operaciones",
                      "Analizar datos de ventas y logística, construir reportes y tableros para la gerencia.",
                      "SQL, Excel, Power BI", "Python, ERP, inglés", 1, owner["id"], boss["id"]))
                 for f in sorted(Path("samples").glob("*.txt")):
                     db.execute("INSERT INTO candidates(vacancy_id,filename,redacted_text) VALUES(?,?,?)",
-                               (cur.lastrowid, f.name, redact(extract_text(f.name, f.read_bytes()))))
+                               (vid, f.name, redact(extract_text(f.name, f.read_bytes()))))
     if creds:
         print("\nUsuarios creados (guarda estas contraseñas, no se vuelven a mostrar):")
         for e, p, r in creds:
