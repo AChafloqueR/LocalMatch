@@ -12,11 +12,14 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import llm
 from .auth import NeedLogin, current_user, hash_password, require, verify_password
+from .config import load_env
 from .db import get_db, init_db
 from .parsing import extract_text
 from .skills.pipeline import run_agent, vacancy_dict
 from .skills.redact import redact
 from .sus import ITEMS, category, describe, sus_score
+
+load_env()  # carga el .env del proyecto si existe (no pisa variables ya exportadas)
 
 BASE = os.path.dirname(__file__)
 app = FastAPI(title="LocalMatch")
