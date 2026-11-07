@@ -1,0 +1,80 @@
+@startuml LocalMatch_Arquitectura
+title LocalMatch · Arquitectura del sistema
+
+skinparam componentStyle rectangle
+left to right direction
+
+actor "Reclutador" as recruiter
+actor "Jefe de área" as boss
+actor "Admin\n(investigación)" as admin
+
+rectangle "Navegador\nHTML (Jinja2) + CSS propio" as browser
+
+package "LocalMatch · FastAPI + Uvicorn" {
+
+  [SessionMiddleware\nsesión firmada en cookie] as session
+  [app/main.py\nrutas HTTP + formularios] as main
+  [app/auth.py\nrequire(): acceso por perfil] as auth
+  [app/parsing.py\nextrae texto del CV] as parsing
+  [app/sus.py\ncuestionario y puntaje SUS] as sus
+
+  package "Agente de preselección (app/skills)" {
+    [redact.py\nanonimiza el CV] as redact
+    [pipeline.py\nrun_agent(): orquesta] as pipeline
+    [textutil.py\nsimilitud TF-IDF coseno] as tfidf
+    [extract.py\nperfil estructurado] as extract
+    [score.py\npuntaje DETERMINISTA] as score
+    [explain.py\nexplicación legible] as explain
+  }
+
+  [app/llm.py\nurllib · mock | ollama | anthropic\nsi falla: método por reglas] as llm
+  [app/db.py\nmisma interfaz, dos motores] as db
+}
+
+cloud "Ollama (local)\no Anthropic API" as llmext
+database "SQLite\nlocalmatch.db" as sqlite
+database "PostgreSQL\nSupabase / Neon / Render" as pg
+file ".env\nDATABASE_URL · LLM_PROVIDER\nclaves y secretos" as env
+
+recruiter --> browser
+boss --> browser
+admin --> browser
+browser --> session : HTTPS
+session --> main
+
+main --> auth : cada perfil solo ve lo suyo
+main --> parsing : subida de CV
+main --> redact : texto extraído
+redact --> db : guarda CV anonimizado
+
+main --> pipeline : run_agent(vacante)
+pipeline --> tfidf
+pipeline --> extract
+pipeline --> score
+pipeline --> explain
+extract --> llm : apoyo opcional
+explain --> llm : apoyo opcional
+llm --> llmext : solo texto anonimizado
+pipeline --> db : score + desglose + explicación
+
+main --> sus : respuestas SUS
+sus --> db
+
+db --> sqlite : por defecto
+db --> pg : si hay DATABASE_URL
+env ..> llm
+env ..> db
+
+note right of score
+  El LLM nunca fija el puntaje:
+  lo calcula código determinista
+  (requisito del proyecto).
+end note
+
+note bottom of redact
+  Anonimiza ANTES de guardar
+  y ANTES de llamar al LLM.
+  El jefe nunca ve el nombre del archivo.
+end note
+
+@enduml
