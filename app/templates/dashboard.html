@@ -24,6 +24,19 @@
   <a class="btn" href="/sus">Responder el SUS</a>
 </div>{% endif %}
 
+{% if metrics %}
+<div class="card">
+  <h2>Beneficio para tu empresa</h2>
+  <div class="grid" style="margin:10px 0">
+    <div><div class="big">{{ metrics.recibidas }}</div><div class="hint">CV recibidos ({{ metrics.evaluadas }} evaluados por el agente)</div></div>
+    <div><div class="big">{{ metrics.seleccionadas }}</div><div class="hint">candidatos que se revisan a mano</div></div>
+    <div><div class="big">{{ metrics.horas_ahorro }} h</div><div class="hint">de revisión que te ahorras</div></div>
+    {% if metrics.dias_hasta_lista is not none %}<div><div class="big">{{ metrics.dias_hasta_lista }} d</div><div class="hint">desde la primera postulación hasta enviar la lista corta</div></div>{% endif %}
+  </div>
+  <p class="hint">Estimación con el supuesto de {{ '%g'|format(metrics.min_por_cv) }} minutos de revisión manual por CV: sin el agente, {{ metrics.horas_manual }} h; con el agente, solo se revisan los seleccionados ({{ metrics.horas_agente }} h).</p>
+</div>
+{% endif %}
+
 {% if user.role == 'admin' %}
 <div class="card"><a class="btn" href="/admin/sus">Ver resultados SUS</a></div>
 {% else %}

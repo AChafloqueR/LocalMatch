@@ -58,3 +58,8 @@ th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;le
 .empty{text-align:center;color:var(--muted);padding:34px}
 .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:30px}
 @media(max-width:640px){.cand{grid-template-columns:1fr}.parts{grid-template-columns:repeat(2,1fr)}.likert{grid-template-columns:1fr}.nav .in{flex-wrap:wrap}}
+.chips span.opt{background:#eef0ff;color:var(--brand)}
+.reqs{width:100%;border-collapse:collapse;font-size:13px}.reqs td,.reqs th{padding:4px 6px;border-bottom:1px solid var(--line)}
+.reqs input,.reqs select{padding:6px 8px;font-size:13px}
+.cmp td,.cmp th{vertical-align:top;font-size:13px}
+.flag{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:8px;font-size:12px;font-weight:600;background:var(--bad-soft);color:var(--bad)}

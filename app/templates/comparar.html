@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block title %}Comparar candidatos{% endblock %}
+{% block content %}
+<a href="/vacancies/{{ v.id }}" class="hint">← Volver a la convocatoria</a>
+<h1 style="margin-top:8px">Comparar candidatos</h1><p class="sub">{{ v.title }}</p>
+<div class="card" style="overflow-x:auto"><table class="cmp">
+  <tr><th></th>{% for c in cands %}<th>Candidato #{{ c.id }}<div class="hint">{{ c.applicant_name or c.filename }}</div></th>{% endfor %}</tr>
+  <tr><th>Puntaje</th>{% for c in cands %}<td><b>{{ c.score if c.score is not none else '—' }}</b></td>{% endfor %}</tr>
+  <tr><th>Cumple excluyentes</th>{% for c in cands %}<td>{{ 'Sí' if c.eligible else 'No' }}</td>{% endfor %}</tr>
+  <tr><th>Requisitos cumplidos</th>{% for c in cands %}<td>{{ (c.profile.must_found + c.profile.nice_found)|join(', ') or '—' }}</td>{% endfor %}</tr>
+  <tr><th>Faltan (excluyentes)</th>{% for c in cands %}<td>{{ c.sc.must_missing|join(', ') or '—' }}</td>{% endfor %}</tr>
+  <tr><th>Años de experiencia</th>{% for c in cands %}<td>{{ '%g'|format(c.profile.years or 0) }} ({{ c.profile.years_how }})</td>{% endfor %}</tr>
+  <tr><th>Formación</th>{% for c in cands %}<td>{{ c.profile.education }}</td>{% endfor %}</tr>
+  <tr><th>Última experiencia</th>{% for c in cands %}<td>{{ c.exp_role or '—' }}{% if c.exp_company %} en {{ c.exp_company }}{% endif %}{% if c.exp_time %} ({{ c.exp_time }}){% endif %}</td>{% endfor %}</tr>
+  <tr><th>Respuestas</th>{% for c in cands %}<td>{% for a in c.answers %}{{ a.text }} <b>{{ a.answer }}</b><br>{% else %}—{% endfor %}</td>{% endfor %}</tr>
+  <tr><th>Distrito</th>{% for c in cands %}<td>{{ c.applicant_district or '—' }}</td>{% endfor %}</tr>
+  <tr><th>Explicación</th>{% for c in cands %}<td>{{ c.explanation }}</td>{% endfor %}</tr>
+</table></div>
+{% endblock %}

@@ -12,10 +12,10 @@ SENSITIVE_LINE = re.compile(
 )
 
 
-def redact(text: str) -> str:
+def redact(text: str, strip_first_line: bool = True) -> str:
     lines = text.strip().splitlines()
     # El nombre suele estar en la primera línea: se elimina si parece un nombre.
-    if lines:
+    if lines and strip_first_line:
         first = lines[0].strip()
         if 0 < len(first) <= 45 and not re.search(r"\d|@", first) and len(first.split()) <= 5:
             lines = lines[1:]

@@ -12,32 +12,51 @@ import threading
 from contextlib import contextmanager
 
 TABLES = ["audit_log", "sus_responses", "candidates", "vacancies", "users", "companies"]
+ROLES = "('reclutador','jefe','admin','postulante')"
+
+# (tabla, columna, definición). Sirve tanto para bases nuevas como para migrar las anteriores.
+COLUMNS = [
+    ("users", "company_id", "INTEGER"),
+    ("vacancies", "status", "TEXT NOT NULL DEFAULT 'abierta'"), ("vacancies", "company_id", "INTEGER"),
+    ("vacancies", "published", "INTEGER NOT NULL DEFAULT 0"), ("vacancies", "requirements_json", "TEXT"),
+    ("vacancies", "questions_json", "TEXT"), ("vacancies", "closing_date", "TEXT"), ("vacancies", "top_n", "INTEGER NOT NULL DEFAULT 5"),
+    ("candidates", "applicant_name", "TEXT"), ("candidates", "applicant_email", "TEXT"), ("candidates", "applicant_phone", "TEXT"),
+    ("candidates", "tracking_code", "TEXT"), ("candidates", "consent_at", "TIMESTAMP"), ("candidates", "source", "TEXT NOT NULL DEFAULT 'reclutamiento'"),
+    ("candidates", "user_id", "INTEGER"), ("candidates", "applicant_district", "TEXT"), ("candidates", "exp_role", "TEXT"),
+    ("candidates", "exp_company", "TEXT"), ("candidates", "exp_time", "TEXT"), ("candidates", "exp_description", "TEXT"),
+    ("candidates", "original_file", "{BLOB}"), ("candidates", "original_mime", "TEXT"), ("candidates", "cv_hash", "TEXT"),
+    ("candidates", "answers_json", "TEXT"), ("candidates", "adult_confirmed", "INTEGER NOT NULL DEFAULT 0"), ("candidates", "reject_reason", "TEXT"),
+    ("candidates", "interview_at", "TEXT"), ("candidates", "interview_place", "TEXT"), ("candidates", "interview_status", "TEXT"),
+    ("candidates", "rubric_json", "TEXT"), ("candidates", "rubric_note", "TEXT"), ("candidates", "final_decision", "TEXT"),
+]
 
 
 def use_pg() -> bool:
     return bool(os.getenv("DATABASE_URL"))
 
 
+def _cols(table: str, pg: bool) -> str:
+    blob = "BYTEA" if pg else "BLOB"
+    return ", ".join(f"{c} {d.replace('{BLOB}', blob)}" for t, c, d in COLUMNS if t == table)
+
+
 def schema(pg: bool) -> list[str]:
     pk = "SERIAL PRIMARY KEY" if pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
     real = "DOUBLE PRECISION" if pg else "REAL"
     return [
-        f"""CREATE TABLE IF NOT EXISTS companies(
-          id {pk}, name TEXT UNIQUE NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
+        f"CREATE TABLE IF NOT EXISTS companies(id {pk}, name TEXT UNIQUE NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
         f"""CREATE TABLE IF NOT EXISTS users(
           id {pk}, email TEXT UNIQUE NOT NULL, name TEXT NOT NULL,
-          role TEXT NOT NULL CHECK(role IN ('reclutador','jefe','admin')), pw_hash TEXT NOT NULL, company_id INTEGER)""",
+          role TEXT NOT NULL CHECK(role IN {ROLES}), pw_hash TEXT NOT NULL, {_cols('users', pg)})""",
         f"""CREATE TABLE IF NOT EXISTS vacancies(
           id {pk}, title TEXT NOT NULL, area TEXT NOT NULL, description TEXT NOT NULL,
           must TEXT NOT NULL DEFAULT '', nice TEXT NOT NULL DEFAULT '', min_years {real} NOT NULL DEFAULT 0,
-          owner_id INTEGER NOT NULL, boss_id INTEGER, status TEXT NOT NULL DEFAULT 'abierta', company_id INTEGER, published INTEGER NOT NULL DEFAULT 0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
+          owner_id INTEGER NOT NULL, boss_id INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, {_cols('vacancies', pg)})""",
         f"""CREATE TABLE IF NOT EXISTS candidates(
           id {pk}, vacancy_id INTEGER NOT NULL, filename TEXT NOT NULL, redacted_text TEXT NOT NULL,
           profile_json TEXT, score {real}, breakdown_json TEXT, explanation TEXT,
           shortlisted INTEGER NOT NULL DEFAULT 0, decision TEXT, decision_note TEXT, human_note TEXT,
-          applicant_name TEXT, applicant_email TEXT, applicant_phone TEXT, tracking_code TEXT, consent_at TIMESTAMP,
-          source TEXT NOT NULL DEFAULT 'reclutamiento', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, {_cols('candidates', pg)})""",
         f"""CREATE TABLE IF NOT EXISTS sus_responses(
           id {pk}, user_id INTEGER UNIQUE NOT NULL, profile TEXT NOT NULL, answers TEXT NOT NULL,
           score {real} NOT NULL, experience TEXT, comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
@@ -114,18 +133,30 @@ def _has_col(db, table, col) -> bool:
     return any(r["name"] == col for r in db.execute(f"PRAGMA table_info({table})").fetchall())
 
 
+def _allow_postulante_role(db):
+    """Las bases anteriores restringían el perfil a tres valores: se amplía para incluir al postulante."""
+    if db.pg:
+        db.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check")
+        db.execute(f"ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN {ROLES})")
+        return
+    row = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").fetchone()
+    if row and "'postulante'" not in row["sql"]:
+        cols = [r["name"] for r in db.execute("PRAGMA table_info(users)").fetchall()]
+        db.execute("ALTER TABLE users RENAME TO users_old")
+        db.execute(schema(False)[1])
+        db.execute(f"INSERT INTO users({','.join(cols)}) SELECT {','.join(cols)} FROM users_old")
+        db.execute("DROP TABLE users_old")
+
+
 def init_db():
     with get_db() as db:
         for stmt in schema(db.pg):
             db.execute(stmt)
-        # migraciones para bases creadas con versiones anteriores
-        for table, col, ddl in [
-            ("vacancies", "status", "TEXT NOT NULL DEFAULT 'abierta'"), ("vacancies", "company_id", "INTEGER"), ("vacancies", "published", "INTEGER NOT NULL DEFAULT 0"), ("users", "company_id", "INTEGER"),
-            ("candidates", "applicant_name", "TEXT"), ("candidates", "applicant_email", "TEXT"), ("candidates", "applicant_phone", "TEXT"),
-            ("candidates", "tracking_code", "TEXT"), ("candidates", "consent_at", "TIMESTAMP"), ("candidates", "source", "TEXT NOT NULL DEFAULT 'reclutamiento'"),
-        ]:
+        blob = "BYTEA" if db.pg else "BLOB"
+        for table, col, ddl in COLUMNS:
             if not _has_col(db, table, col):
-                db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}")
+                db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl.replace('{BLOB}', blob)}")
+        _allow_postulante_role(db)
         db.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_candidates_tracking ON candidates(tracking_code)")
         # datos existentes sin empresa -> "Empresa de práctica"
         if db.execute("SELECT 1 FROM users WHERE role IN ('reclutador','jefe') AND company_id IS NULL").fetchone():

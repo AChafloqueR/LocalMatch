@@ -10,6 +10,14 @@ Incluye perfiles diferenciados (reclutamiento / jefe de área / investigación) 
 4. El **jefe de área** ve candidatos anonimizados con su explicación y decide: entrevistar, en espera o descartar.
 5. Ambos perfiles responden el **SUS** dentro del sistema; el perfil de investigación descarga el CSV.
 
+## Novedades de la versión 1.3 (flujo completo del postulante, reclutamiento y jefe de área)
+- **Postulante con cuenta:** se registra (con verificación simple), ve las convocatorias de todas las empresas, postula con celular (9 dígitos, empieza con 9), distrito, última experiencia, preguntas de la convocatoria, CV y confirmaciones (mayor de 18 años y consentimiento), y sigue el estado en **Mis postulaciones**. Una sola postulación por convocatoria y puede postular a varias.
+- **Convocatorias por empresa:** cada empresa crea las suyas, desde una **plantilla** (7 carreras) o en blanco. Requisitos objetivos de tipo herramienta, formación, certificación o idioma, con **peso**, carácter **excluyente** y **sinónimos**; hasta 3 preguntas de sí o no (excluyentes o no); fecha límite que cierra sola; top configurable de 3 a 10. No se usan edad, sexo ni estado civil.
+- **Reclutamiento:** ranking con los N mejores que cumplen los excluyentes, envío de los N al jefe con un clic, descarga de seleccionados (ZIP con CV originales + Excel de resumen), comparador lado a lado, descarte con motivo, y panel del beneficio (CV recibidos, horas ahorradas, días hasta enviar la lista).
+- **Jefe de área:** ve nombre, contacto y CV de los candidatos enviados (descarga individual o ZIP), decide, programa entrevistas, registra la evaluación (rúbrica 1 a 5) y la decisión final; el postulante ve el avance.
+- **Privacidad:** el agente evalúa siempre el CV **anonimizado**. El archivo original se guarda para poder descargarlo y se **borra** al cerrar la convocatoria (salvo los seleccionados) o cuando el postulante elimina su postulación.
+- Administración: botón para cargar las convocatorias de ejemplo en una empresa. Se agrega la dependencia `openpyxl` para el Excel.
+
 ## Novedades de la versión 1.2 (multiempresa y portal del postulante)
 - **Multiempresa:** el perfil de investigación registra empresas y crea las cuentas de su personal de reclutamiento y de sus jefes de área. Cada empresa solo ve sus vacantes y candidatos.
 - **Portal del postulante** (`/empleos`, sin iniciar sesión): ve las vacantes publicadas, postula con sus datos, su CV y el consentimiento, y consulta su estado con un **código de seguimiento** (no se envían correos). Puede eliminar su postulación.

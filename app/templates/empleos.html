@@ -1,7 +1,8 @@
-{% extends "base.html" %}{% block title %}Empleos · LocalMatch{% endblock %}
+{% extends "base.html" %}{% block title %}Convocatorias · LocalMatch{% endblock %}
 {% block content %}
-<h1>Empleos en empresas de Trujillo</h1>
-<p class="sub">Elige una vacante y postula con tu CV. Tu CV se anonimiza antes de ser evaluado.</p>
+<h1>Convocatorias de empresas de Trujillo</h1>
+<p class="sub">Elige una convocatoria y postula con tu CV. Tu CV se anonimiza antes de ser evaluado por el agente.</p>
+{% if not user %}<div class="card row" style="background:var(--brand-soft);border-color:transparent"><div class="grow"><b>Para postular necesitas una cuenta</b><div class="hint">Es gratis y toma un minuto.</div></div><a class="btn ghost" href="/login">Ingresar</a><a class="btn" href="/registro">Crear cuenta</a></div>{% endif %}
 <form method="get" action="/empleos" class="row" style="margin-bottom:18px">
   <input class="grow" type="text" name="q" value="{{ q }}" placeholder="Busca por puesto, área o empresa">
   <button class="btn">Buscar</button>
@@ -11,15 +12,11 @@
   <div class="card">
     <span class="badge">{{ v.area }}</span>
     <h2 style="margin-top:10px">{{ v.title }}</h2>
-    <p class="hint" style="margin-top:-6px">{{ v.company }}</p>
+    <p class="hint" style="margin-top:-6px">{{ v.company }}{% if v.closing_date %} · cierra el {{ v.closing_date }}{% endif %}</p>
     <p style="font-size:14px">{{ v.short }}</p>
-    <div class="chips">{% for t in v.must_list %}<span>{{ t }}</span>{% endfor %}</div>
+    <div class="chips">{% for t in v.chips %}<span>{{ t }}</span>{% endfor %}</div>
     <p style="margin-top:14px"><a class="btn small" href="/empleos/{{ v.id }}">Ver y postular</a></p>
   </div>
 {% endfor %}</div>
-{% else %}<div class="card empty">No hay vacantes publicadas por ahora.</div>{% endif %}
-<form class="card" method="get" action="/postulacion" style="margin-top:22px">
-  <h2>Consulta el estado de tu postulación</h2>
-  <div class="row"><input class="grow" type="text" name="code" placeholder="Tu código de seguimiento (por ejemplo, 9F3A1C2B)"><button class="btn ghost">Consultar</button></div>
-</form>
+{% else %}<div class="card empty">No hay convocatorias publicadas por ahora.</div>{% endif %}
 {% endblock %}

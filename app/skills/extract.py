@@ -41,14 +41,23 @@ def snippet(text: str, term: str, width: int = 70) -> str:
     return "…" + " ".join(text[a:b].split()) + "…"
 
 
-def extract_profile(text: str, must: list[str], nice: list[str]) -> dict:
+def matched_term(n: str, item: dict) -> str | None:
+    """Devuelve el término (nombre o sinónimo) del requisito que aparece en el texto normalizado."""
+    for t in [item["name"], *item.get("synonyms", [])]:
+        if has_term(n, t):
+            return t
+    return None
+
+
+def extract_profile(text: str, items: list[dict]) -> dict:
     n = norm(text)
-    found_must = [t for t in must if has_term(n, t)]
-    found_nice = [t for t in nice if has_term(n, t)]
+    hits = {it["name"]: matched_term(n, it) for it in items}
+    must = [i["name"] for i in items if i["mandatory"]]
+    nice = [i["name"] for i in items if not i["mandatory"]]
     years, how = years_of_experience(text)
     profile = {
-        "must_found": found_must,
-        "nice_found": found_nice,
+        "must_found": [m for m in must if hits[m]],
+        "nice_found": [m for m in nice if hits[m]],
         "years": years,
         "years_how": how,
         "education": education(text),
@@ -64,12 +73,12 @@ def extract_profile(text: str, must: list[str], nice: list[str]) -> dict:
             system="Responde únicamente con JSON válido.",
         )
         if data:
-            profile["must_found"] = sorted(set(found_must) | {t for t in data.get("must_found", []) if t in must})
-            profile["nice_found"] = sorted(set(found_nice) | {t for t in data.get("nice_found", []) if t in nice})
+            profile["must_found"] = sorted(set(profile["must_found"]) | {t for t in data.get("must_found", []) if t in must})
+            profile["nice_found"] = sorted(set(profile["nice_found"]) | {t for t in data.get("nice_found", []) if t in nice})
             if isinstance(data.get("years"), (int, float)) and data["years"] > 0:
                 profile["years"], profile["years_how"] = float(data["years"]), "interpretada por el modelo"
             if data.get("education"):
                 profile["education"] = str(data["education"])[:60]
             profile["method"] = f"LLM ({llm.provider()}) + reglas"
-    profile["evidence"] = {t: snippet(text, t) for t in profile["must_found"] + profile["nice_found"]}
+    profile["evidence"] = {t: snippet(text, hits.get(t) or t) for t in profile["must_found"] + profile["nice_found"]}
     return profile

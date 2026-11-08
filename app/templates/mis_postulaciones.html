@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}Mis postulaciones{% endblock %}
+{% block content %}
+<h1>Mis postulaciones</h1><p class="sub">Aquí ves el estado de cada convocatoria a la que postulaste.</p>
+{% for it in items %}
+<div class="card row">
+  <div class="grow"><b>{{ it.c.vtitle }}</b><div class="hint">{{ it.c.company }} · postulaste el {{ it.c.created_at }}</div>
+    <p style="margin:8px 0 0"><span class="badge {{ it.tone }}">{{ it.status }}</span>{% if it.detail %} <span class="hint">{{ it.detail }}</span>{% endif %}</p></div>
+  <form method="post" action="/mis-postulaciones/{{ it.c.id }}/eliminar" onsubmit="return confirm('¿Eliminar tu postulación, tu CV y tus datos? No se puede deshacer.')"><button class="btn danger small">Eliminar</button></form>
+</div>
+{% else %}<div class="card empty">Aún no postulaste a ninguna convocatoria. <a href="/empleos"><b>Ver convocatorias</b></a></div>{% endfor %}
+{% endblock %}

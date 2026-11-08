@@ -1,0 +1,31 @@
+<div class="grid">
+  <div><label>Puesto</label><input type="text" name="title" required maxlength="100" value="{{ f.title }}"></div>
+  <div><label>Área</label><input type="text" name="area" required maxlength="80" value="{{ f.area }}"></div>
+  <div><label>Jefe de área que decidirá</label>
+    <select name="boss_id" required><option value="">Elige…</option>{% for b in bosses %}<option value="{{ b.id }}" {{ 'selected' if b.id == f.boss_id }}>{{ b.name }}</option>{% endfor %}</select></div>
+</div>
+<label>Descripción del puesto</label><textarea name="description" required maxlength="3000">{{ f.description }}</textarea>
+<div class="grid">
+  <div><label>Años mínimos de experiencia</label><input type="number" name="min_years" min="0" step="0.5" value="{{ f.min_years }}"></div>
+  <div><label>Fecha límite <span class="hint">(opcional; la convocatoria se cierra sola)</span></label><input type="date" name="closing_date" value="{{ f.closing_date }}"></div>
+  <div><label>Candidatos que el agente propone (top)</label>
+    <select name="top_n">{% for n in range(3, 11) %}<option {{ 'selected' if n == f.top_n }}>{{ n }}</option>{% endfor %}</select></div>
+</div>
+<h2 style="margin-top:20px">Requisitos del puesto</h2>
+<p class="hint">Solo requisitos objetivos y ligados al puesto: herramientas o habilidades, formación, certificaciones e idiomas. No se usan edad, sexo ni estado civil. «Excluyente» significa que sin ese requisito el candidato no entra al top. El peso (1 a 5) indica cuánto suma. Los sinónimos (separados por comas) ayudan al agente a reconocer el requisito, por ejemplo «hojas de cálculo» para Excel.</p>
+<table class="reqs">
+  <tr><th>Requisito</th><th>Tipo</th><th>Peso</th><th>Excluyente</th><th>Sinónimos</th></tr>
+  {% for r in f.rows %}{% set i = loop.index %}
+  <tr><td><input type="text" name="rq_name_{{ i }}" maxlength="60" value="{{ r.name }}" placeholder="Requisito {{ i }}"></td>
+    <td><select name="rq_kind_{{ i }}">{% for k, lab in kinds.items() %}<option value="{{ k }}" {{ 'selected' if k == r.kind }}>{{ lab }}</option>{% endfor %}</select></td>
+    <td><select name="rq_weight_{{ i }}">{% for w in range(1, 6) %}<option {{ 'selected' if w == r.weight }}>{{ w }}</option>{% endfor %}</select></td>
+    <td style="text-align:center"><input type="checkbox" name="rq_mand_{{ i }}" value="1" {{ 'checked' if r.mandatory }} style="width:auto"></td>
+    <td><input type="text" name="rq_syn_{{ i }}" value="{{ r.synonyms|join(', ') }}"></td></tr>
+  {% endfor %}
+</table>
+<h2 style="margin-top:20px">Preguntas para el postulante <span class="hint">(opcional, hasta 3, de sí o no)</span></h2>
+{% for q in f.qrows %}{% set i = loop.index %}
+<div class="row" style="margin:6px 0"><input class="grow" type="text" name="q_text_{{ i }}" maxlength="120" value="{{ q.text }}" placeholder="Ej.: ¿Tienes disponibilidad inmediata?">
+  <label style="margin:0;font-weight:500"><input type="checkbox" name="q_mand_{{ i }}" value="1" {{ 'checked' if q.mandatory }} style="width:auto"> Excluyente (si responde «No», no entra al top)</label></div>
+{% endfor %}
+<label style="font-weight:500;margin-top:16px"><input type="checkbox" name="published" value="1" {{ 'checked' if f.published }} style="width:auto;margin-right:8px">Publicar en el portal de convocatorias para que los postulantes puedan postular</label>

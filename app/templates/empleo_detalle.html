@@ -1,22 +1,44 @@
-{% extends "base.html" %}{% block title %}{{ v.title }} · {{ v.company }}{% endblock %}
+{% extends "base.html" %}{% block title %}{{ v.title }} · {{ company }}{% endblock %}
 {% block content %}
-<a href="/empleos" class="hint">← Volver a las vacantes</a>
+<a href="/empleos" class="hint">← Volver a las convocatorias</a>
 <div style="margin-top:8px"><span class="badge">{{ v.area }}</span></div>
 <h1 style="margin-top:8px">{{ v.title }}</h1>
-<p class="sub">{{ v.company }}{% if v.min_years %} · mínimo {{ '%g'|format(v.min_years) }} año(s) de experiencia{% endif %}</p>
+<p class="sub">{{ company }}{% if v.min_years %} · mínimo {{ '%g'|format(v.min_years) }} año(s) de experiencia{% endif %}{% if v.closing_date %} · cierra el {{ v.closing_date }}{% endif %}</p>
 <div class="card">
   <h2>Descripción</h2><p>{{ v.description }}</p>
-  <div class="chips"><b style="font-size:13px">Requisitos:</b> {% for t in v.must_list %}<span>{{ t }}</span>{% endfor %}
-  {% if v.nice_list %}&nbsp;<b style="font-size:13px">Deseables:</b> {% for t in v.nice_list %}<span>{{ t }}</span>{% endfor %}{% endif %}</div>
+  <h2 style="margin-top:14px">Requisitos</h2>
+  <div class="chips">{% for i in items %}<span class="{{ '' if i.mandatory else 'opt' }}">{{ i.name }}{% if i.mandatory %} · excluyente{% endif %}</span>{% endfor %}</div>
+  <p class="hint">Los requisitos marcados «excluyente» son indispensables. No se evalúan datos como edad, sexo o estado civil.</p>
 </div>
+{% if applied %}
+<div class="card"><h2>Ya postulaste a esta convocatoria</h2><p><a class="btn" href="/mis-postulaciones">Ver el estado en «Mis postulaciones»</a></p></div>
+{% elif not can_apply %}
+<div class="card"><h2>Ingresa para postular</h2><p class="hint">Necesitas una cuenta de postulante.</p><p class="row"><a class="btn" href="/login">Ingresar</a><a class="btn ghost" href="/registro">Crear cuenta</a></p></div>
+{% else %}
 <form class="card" method="post" action="/empleos/{{ v.id }}/postular" enctype="multipart/form-data">
-  <h2>Postula a esta vacante</h2>
-  <label>Nombre completo</label><input type="text" name="name" required maxlength="80">
-  <label>Correo</label><input type="email" name="email" required maxlength="120">
-  <label>Teléfono <span class="hint">(opcional)</span></label><input type="text" name="phone" maxlength="30">
-  <label>Tu CV <span class="hint">(PDF, DOCX o TXT, máximo 5 MB)</span></label><input type="file" name="cv" accept=".pdf,.docx,.txt" required>
-  <label style="font-weight:500;margin-top:16px"><input type="checkbox" name="consent" value="1" style="width:auto;margin-right:8px">Acepto que {{ v.company }} trate mis datos y mi CV para este proceso de selección, conforme a la Ley N.° 29733. Sé que puedo eliminar mi postulación cuando quiera.</label>
-  <p class="hint">Tu CV se anonimiza antes de ser evaluado por el agente y el jefe de área no verá tu nombre ni tus datos de contacto. El personal de reclutamiento de {{ v.company }} sí verá tus datos de contacto para comunicarse contigo. La decisión final siempre la toma una persona.</p>
+  <h2>Postula a esta convocatoria</h2>
+  <div class="grid">
+    <div><label>Celular <span class="hint">(9 dígitos, empieza con 9)</span></label>
+      <input type="text" name="phone" required inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" placeholder="987654321" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+    <div><label>¿Dónde vives actualmente?</label>
+      <select name="district" required><option value="">Elige tu distrito…</option>{% for d in districts %}<option>{{ d }}</option>{% endfor %}<option>{{ other }}</option></select></div>
+    <div><label>Si elegiste «Otro», ¿cuál?</label><input type="text" name="district_other" maxlength="60"></div>
+  </div>
+  <h2 style="margin-top:18px">Cuéntanos tu última experiencia</h2>
+  <div class="grid">
+    <div><label>Cargo</label><input type="text" name="exp_role" required maxlength="80"></div>
+    <div><label>Empresa</label><input type="text" name="exp_company" required maxlength="80"></div>
+    <div><label>Tiempo</label><input type="text" name="exp_time" required maxlength="40" placeholder="Ej.: 2 años"></div>
+  </div>
+  <label>¿Qué hacías? <span class="hint">(mínimo 20 caracteres)</span></label><textarea name="exp_desc" required minlength="20" maxlength="1200"></textarea>
+  {% if questions %}<h2 style="margin-top:18px">Preguntas de la convocatoria</h2>
+  {% for q in questions %}<div class="row" style="margin:8px 0"><span class="grow">{{ q.text }}{% if q.mandatory %} <span class="badge warn">excluyente</span>{% endif %}</span>
+    <select name="ans_{{ loop.index }}" required style="width:auto"><option value="">…</option><option>Sí</option><option>No</option></select></div>{% endfor %}{% endif %}
+  <label style="margin-top:16px">Tu CV <span class="hint">(PDF, DOCX o TXT, máximo 5 MB)</span></label><input type="file" name="cv" accept=".pdf,.docx,.txt" required>
+  <label style="font-weight:500;margin-top:16px"><input type="checkbox" name="adult" value="1" required style="width:auto;margin-right:8px">Soy mayor de 18 años.</label>
+  <label style="font-weight:500"><input type="checkbox" name="consent" value="1" required style="width:auto;margin-right:8px">Acepto que {{ company }} trate mis datos y guarde mi CV para este proceso de selección, y que su personal de reclutamiento y el jefe de área vean mis datos de contacto y mi CV si paso a la lista corta, conforme a la Ley N.° 29733. Puedo eliminar mi postulación cuando quiera.</label>
+  <p class="hint">El agente evalúa una versión anonimizada de tu CV. La decisión final siempre la toma una persona.</p>
   <p><button class="btn">Enviar postulación</button></p>
 </form>
+{% endif %}
 {% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Crear cuenta · LocalMatch{% endblock %}
+{% block content %}
+<div class="center card">
+  <h1>Crea tu cuenta</h1><p class="sub">Para postular a las convocatorias de las empresas.</p>
+  <form method="post" action="/registro">
+    <label>Nombre completo</label><input type="text" name="name" required maxlength="80" value="{{ f.get('name','') }}">
+    <label>Correo</label><input type="email" name="email" required maxlength="120" value="{{ f.get('email','') }}">
+    <label>Contraseña <span class="hint">(mínimo 8 caracteres)</span></label><input type="password" name="password" required minlength="8">
+    <label>Verificación: ¿cuánto es {{ cap }}?</label><input type="text" name="cap" required inputmode="numeric" autocomplete="off">
+    <p><button class="btn" style="width:100%;margin-top:18px">Crear cuenta</button></p>
+  </form>
+  <p class="hint" style="text-align:center">¿Ya tienes cuenta? <a href="/login"><b>Ingresar</b></a></p>
+</div>
+{% endblock %}

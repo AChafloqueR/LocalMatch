@@ -2,25 +2,48 @@
 {% block content %}
 <span class="badge">{{ v.area }}</span>
 <h1 style="margin-top:8px">{{ v.title }}</h1>
-<p class="sub">Candidatos propuestos por reclutamiento, anonimizados. La decisión final es tuya.</p>
+<div class="row"><p class="sub grow">Candidatos seleccionados por reclutamiento con ayuda del agente. Revisa sus CV, decide y organiza las entrevistas.</p>
+  {% if cands %}<a class="btn small" href="/shortlists/{{ v.id }}/cvs.zip">Descargar todos los CV (ZIP)</a>{% endif %}</div>
 {% for c in cands %}
-{% set sc = c.breakdown_json|fromjson %}{% set pr = c.profile_json|fromjson %}
 <div class="card cand">
   <div class="rank">{{ loop.index }}<small>puesto</small></div>
   <div>
-    <div class="row"><b>Candidato #{{ c.id }}</b>
-    {% if c.decision %}<span class="badge {{ 'ok' if c.decision=='Entrevistar' else ('warn' if c.decision=='En espera' else 'bad') }}">{{ c.decision }}</span>{% endif %}</div>
+    <div class="row"><b>{{ c.applicant_name or ('Candidato #' ~ c.id) }}</b><span class="hint">#{{ c.id }}</span>
+      {% if c.decision %}<span class="badge {{ 'ok' if c.decision=='Entrevistar' else ('warn' if c.decision=='En espera' else 'bad') }}">{{ c.decision }}</span>{% endif %}
+      {% if c.interview_status %}<span class="badge {{ 'ok' if c.interview_status=='Programada' else '' }}">Entrevista {{ c.interview_status|lower }}</span>{% endif %}
+      {% if c.final_decision %}<span class="badge {{ 'ok' if c.final_decision=='Contratado' else 'bad' }}">{{ c.final_decision }}</span>{% endif %}</div>
+    {% if c.applicant_email %}<p class="ev" style="margin:6px 0"><b>Contacto:</b> {{ c.applicant_email }}{% if c.applicant_phone %} · {{ c.applicant_phone }}{% endif %}{% if c.applicant_district %} · {{ c.applicant_district }}{% endif %}</p>{% endif %}
+    {% if c.exp_role %}<p class="ev" style="margin:4px 0"><b>Última experiencia:</b> {{ c.exp_role }} en {{ c.exp_company }} ({{ c.exp_time }}). {{ c.exp_description }}</p>{% endif %}
     <div class="bar"><i style="width:{{ c.score or 0 }}%"></i></div><b>{{ c.score }}</b> <span class="hint">de 100 puntos</span>
     <p style="margin:8px 0">{{ c.explanation }}</p>
-    <div class="chips">{% for t in pr.must_found %}<span>✓ {{ t }}</span>{% endfor %}{% for t in sc.must_missing %}<span class="miss">✗ {{ t }}</span>{% endfor %}</div>
+    <div class="chips">{% for t in c.profile.must_found %}<span>✓ {{ t }}</span>{% endfor %}{% for t in c.sc.must_missing %}<span class="miss">✗ {{ t }}</span>{% endfor %}{% for t in c.profile.nice_found %}<span class="opt">+ {{ t }}</span>{% endfor %}</div>
     {% if c.human_note %}<p class="ev"><b>Nota de reclutamiento:</b> {{ c.human_note }}</p>{% endif %}
-    <details><summary>Ver evidencias del CV</summary>
-      {% for k,e in pr.evidence.items() %}<div class="ev"><b>{{ k }}:</b> {{ e }}</div>{% endfor %}</details>
     <form method="post" action="/candidates/{{ c.id }}/decision" class="row" style="margin-top:12px">
       <select name="decision" style="width:auto">{% for d in ['Entrevistar','En espera','Descartar'] %}<option {{ 'selected' if c.decision==d }}>{{ d }}</option>{% endfor %}</select>
       <input class="grow" type="text" name="decision_note" value="{{ c.decision_note or '' }}" placeholder="Comentario (opcional)">
       <button class="btn small">Guardar decisión</button></form>
-  </div><div></div>
+    {% if c.decision == 'Entrevistar' %}
+    <div class="card" style="background:#fafafa;margin:12px 0 0">
+      <b>Entrevista</b>
+      {% if c.interview_status %}<p class="hint">{{ c.interview_at|replace('T', ' a las ') }} · {{ c.interview_place }} · {{ c.interview_status }}</p>{% endif %}
+      {% if c.interview_status != 'Realizada' %}
+      <form method="post" action="/candidates/{{ c.id }}/interview" class="row"><input type="datetime-local" name="at" required style="width:auto" value="{{ c.interview_at or '' }}"><input class="grow" type="text" name="place" required placeholder="Lugar o enlace de la reunión" value="{{ c.interview_place or '' }}"><button class="btn ghost small">{{ 'Reprogramar' if c.interview_status else 'Programar' }}</button></form>
+      {% if c.interview_status == 'Programada' %}<form method="post" action="/candidates/{{ c.id }}/interview-done" style="margin-top:8px"><button class="btn small">Marcar como realizada</button></form>{% endif %}
+      {% else %}
+      {% if c.final_decision %}
+        <p class="ev">{% for k, lab in [('tecnico','Conocimientos técnicos'),('comunicacion','Comunicación'),('ajuste','Ajuste al puesto'),('actitud','Actitud y trabajo en equipo')] %}{{ lab }}: <b>{{ c.rubric.get(k) }}</b>/5{% if not loop.last %} · {% endif %}{% endfor %}</p>
+        {% if c.rubric_note %}<p class="ev">{{ c.rubric_note }}</p>{% endif %}
+      {% else %}
+      <form method="post" action="/candidates/{{ c.id }}/rubric">
+        <div class="grid">{% for k, lab in [('tecnico','Conocimientos técnicos'),('comunicacion','Comunicación'),('ajuste','Ajuste al puesto'),('actitud','Actitud y trabajo en equipo')] %}
+          <div><label>{{ lab }} (1 a 5)</label><select name="r_{{ k }}" required><option value="">…</option>{% for n in range(1, 6) %}<option>{{ n }}</option>{% endfor %}</select></div>{% endfor %}</div>
+        <label>Comentario</label><input type="text" name="note" maxlength="400">
+        <div class="row" style="margin-top:10px"><select name="final" required style="width:auto"><option value="">Decisión final…</option><option>Contratado</option><option>No contratado</option></select><button class="btn small">Guardar evaluación</button></div>
+      </form>{% endif %}
+      {% endif %}
+    </div>{% endif %}
+  </div>
+  <div style="display:grid;gap:8px;align-content:start">{% if c.has_file %}<a class="btn ghost small" href="/candidates/{{ c.id }}/cv">Descargar CV</a>{% endif %}</div>
 </div>
 {% else %}<div class="card empty">Reclutamiento aún no te envió candidatos.</div>{% endfor %}
 {% endblock %}

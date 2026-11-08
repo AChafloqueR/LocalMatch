@@ -2,25 +2,23 @@ import csv
 import io
 import json
 import os
+import re
 import secrets
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import llm
 from .auth import NeedLogin, current_user, hash_password, require, verify_password
-from .config import load_env
-from . import public, scenario
+from . import catalog, features, public, ranking, reqs, scenario
+from .web import go, own_candidate as _own_candidate, own_vacancy as _own_vacancy, page, templates
 from .db import audit, get_db, init_db
 from .parsing import extract_text
 from .skills.pipeline import run_agent, vacancy_dict
 from .skills.redact import redact
 from .sus import ITEMS, category, describe, sus_score
-
-load_env()  # carga el .env del proyecto si existe (no pisa variables ya exportadas)
 
 BASE = os.path.dirname(__file__)
 app = FastAPI(title="LocalMatch")
@@ -31,9 +29,6 @@ app.add_middleware(
     https_only=os.getenv("HTTPS_ONLY", "0") == "1",
 )
 app.mount("/static", StaticFiles(directory=os.path.join(BASE, "static")), name="static")
-templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
-templates.env.filters["fromjson"] = lambda s: json.loads(s) if s else {}
-templates.env.globals["category"] = category
 
 PROFILE = {"reclutador": "Personal de reclutamiento", "jefe": "Jefes de área"}
 MAX_FILES, MAX_BYTES = 40, 5_000_000
@@ -75,19 +70,6 @@ def bootstrap_admin():
 
 init_db()
 bootstrap_admin()
-
-
-def page(request: Request, name: str, **ctx):
-    flash = request.session.pop("flash", None)
-    return templates.TemplateResponse(
-        request, name, {"user": current_user(request), "flash": flash, "provider": llm.provider(), **ctx}
-    )
-
-
-def go(request: Request, url: str, msg: str | None = None):
-    if msg:
-        request.session["flash"] = msg
-    return RedirectResponse(url, status_code=303)
 
 
 @app.exception_handler(NeedLogin)
@@ -136,8 +118,13 @@ def logout(request: Request):
 
 @app.get("/dashboard")
 def dashboard(request: Request, user=Depends(require())):
+    if user["role"] == "postulante":
+        return go(request, "/empleos")
+    metrics = None
     with get_db() as db:
+        ranking.close_expired(db)
         if user["role"] == "reclutador":
+            metrics = ranking.company_metrics(db, user["company_id"])
             rows = db.execute(
                 "SELECT v.*, (SELECT COUNT(*) FROM candidates c WHERE c.vacancy_id=v.id) AS n,"
                 " (SELECT COUNT(*) FROM candidates c WHERE c.vacancy_id=v.id AND c.shortlisted=1) AS short"
@@ -151,49 +138,90 @@ def dashboard(request: Request, user=Depends(require())):
             rows = []
         sus = db.execute("SELECT 1 FROM sus_responses WHERE user_id=?", (user["id"],)).fetchone()
     task = task_state(user) if user["role"] in ("reclutador", "jefe") else None
-    return page(request, "dashboard.html", rows=rows, sus_done=bool(sus), task=task)
+    return page(request, "dashboard.html", rows=rows, sus_done=bool(sus), task=task, metrics=metrics)
 
 
 # ---------- reclutador: vacantes ----------
+def _form_values(v=None, t=None):
+    if v is not None:
+        items, qs = reqs.items_from_row(v), reqs.questions_from_row(v)
+        return {"title": v["title"], "area": v["area"], "description": v["description"], "min_years": v["min_years"], "boss_id": v["boss_id"],
+                "published": bool(v["published"]), "closing_date": v["closing_date"] or "", "top_n": v["top_n"] or 5,
+                "rows": reqs.pad_rows(items), "qrows": reqs.pad_questions(qs)}
+    if t is not None:
+        qs = [{"text": q, "mandatory": m} for q, m in t["questions"]]
+        return {"title": t["title"], "area": t["area"], "description": t["description"], "min_years": t["min_years"], "boss_id": None,
+                "published": True, "closing_date": "", "top_n": 5, "rows": reqs.pad_rows(t["items"]), "qrows": reqs.pad_questions(qs)}
+    return {"title": "", "area": "", "description": "", "min_years": 1, "boss_id": None, "published": True, "closing_date": "", "top_n": 5,
+            "rows": reqs.pad_rows([]), "qrows": reqs.pad_questions([])}
+
+
+def _vacancy_fields(form) -> dict:
+    title, area = " ".join(str(form.get("title", "")).split())[:100], " ".join(str(form.get("area", "")).split())[:80]
+    description = str(form.get("description", "")).strip()[:3000]
+    if not title or not area or not description:
+        raise HTTPException(400, "Completa el puesto, el área y la descripción.")
+    try:
+        boss_id = int(form.get("boss_id", ""))
+        min_years = max(float(form.get("min_years", 0) or 0), 0)
+        top_n = min(max(int(form.get("top_n", 5) or 5), 3), 10)
+    except ValueError:
+        raise HTTPException(400, "Revisa los números del formulario.")
+    closing = str(form.get("closing_date", "")).strip()
+    if closing and not re.match(r"^\d{4}-\d{2}-\d{2}$", closing):
+        raise HTTPException(400, "La fecha límite no es válida.")
+    items = reqs.items_from_form(form)
+    must, nice = reqs.legacy_lists(items)
+    return {"title": title, "area": area, "description": description, "boss_id": boss_id, "min_years": min_years, "top_n": top_n,
+            "closing": closing or None, "published": 1 if form.get("published") else 0, "items": items, "must": must, "nice": nice,
+            "questions": reqs.questions_from_form(form)}
+
+
+def _bosses(db, user):
+    return db.execute("SELECT id,name FROM users WHERE role='jefe' AND company_id=? ORDER BY name", (user["company_id"],)).fetchall()
+
+
 @app.get("/vacancies/new")
-def vacancy_new(request: Request, user=Depends(require("reclutador"))):
+def vacancy_new(request: Request, plantilla: str = "", user=Depends(require("reclutador"))):
     with get_db() as db:
-        bosses = db.execute("SELECT id,name FROM users WHERE role='jefe' AND company_id=? ORDER BY name", (user["company_id"],)).fetchall()
-    return page(request, "vacancy_new.html", bosses=bosses)
+        bosses = _bosses(db, user)
+    f = _form_values(t=catalog.template(plantilla))
+    return page(request, "vacancy_new.html", bosses=bosses, f=f, plantillas=catalog.TEMPLATES, kinds=catalog.KINDS, plantilla=plantilla)
 
 
 @app.post("/vacancies/new")
-def vacancy_create(request: Request, title: str = Form(...), area: str = Form(...), description: str = Form(...),
-                   must: str = Form(""), nice: str = Form(""), min_years: float = Form(0), boss_id: int = Form(...),
-                   published: str = Form(""), user=Depends(require("reclutador"))):
+async def vacancy_create(request: Request, user=Depends(require("reclutador"))):
+    d = _vacancy_fields(await request.form())
     with get_db() as db:
-        _check_boss(db, boss_id, user)
+        _check_boss(db, d["boss_id"], user)
         vid = db.insert(
-            "INSERT INTO vacancies(title,area,description,must,nice,min_years,owner_id,boss_id,company_id,published) VALUES(?,?,?,?,?,?,?,?,?,?)",
-            (title.strip(), area.strip(), description.strip(), must, nice, max(min_years, 0), user["id"], boss_id, user["company_id"], 1 if published else 0))
-        audit(db, user["id"], "vacante_creada", "vacante", vid, title.strip())
-    return go(request, f"/vacancies/{vid}", "Vacante creada. Ahora sube los CV.")
+            "INSERT INTO vacancies(title,area,description,must,nice,min_years,owner_id,boss_id,company_id,published,requirements_json,questions_json,closing_date,top_n)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (d["title"], d["area"], d["description"], d["must"], d["nice"], d["min_years"], user["id"], d["boss_id"], user["company_id"], d["published"],
+             json.dumps(d["items"], ensure_ascii=False), json.dumps(d["questions"], ensure_ascii=False), d["closing"], d["top_n"]))
+        audit(db, user["id"], "vacante_creada", "vacante", vid, d["title"])
+    return go(request, f"/vacancies/{vid}", "Convocatoria creada." + (" Ya aparece en el portal de empleos." if d["published"] else " Ahora sube los CV."))
 
 
 @app.get("/vacancies/{vid}/edit")
 def vacancy_edit_form(request: Request, vid: int, user=Depends(require("reclutador"))):
     with get_db() as db:
         v = _own_vacancy(db, vid, user)
-        bosses = db.execute("SELECT id,name FROM users WHERE role='jefe' AND company_id=? ORDER BY name", (user["company_id"],)).fetchall()
-    return page(request, "vacancy_edit.html", v=v, bosses=bosses)
+        bosses = _bosses(db, user)
+    return page(request, "vacancy_edit.html", v=v, bosses=bosses, f=_form_values(v=v), kinds=catalog.KINDS)
 
 
 @app.post("/vacancies/{vid}/edit")
-def vacancy_edit(request: Request, vid: int, title: str = Form(...), area: str = Form(...), description: str = Form(...),
-                 must: str = Form(""), nice: str = Form(""), min_years: float = Form(0), boss_id: int = Form(...),
-                 published: str = Form(""), user=Depends(require("reclutador"))):
+async def vacancy_edit(request: Request, vid: int, user=Depends(require("reclutador"))):
+    d = _vacancy_fields(await request.form())
     with get_db() as db:
         _own_vacancy(db, vid, user)
-        _check_boss(db, boss_id, user)
-        db.execute("UPDATE vacancies SET title=?,area=?,description=?,must=?,nice=?,min_years=?,boss_id=?,published=? WHERE id=?",
-                   (title.strip(), area.strip(), description.strip(), must, nice, max(min_years, 0), boss_id, 1 if published else 0, vid))
-        audit(db, user["id"], "vacante_editada", "vacante", vid, title.strip())
-    return go(request, f"/vacancies/{vid}", "Vacante actualizada. Vuelve a ejecutar el agente para recalcular el ranking.")
+        _check_boss(db, d["boss_id"], user)
+        db.execute("UPDATE vacancies SET title=?,area=?,description=?,must=?,nice=?,min_years=?,boss_id=?,published=?,requirements_json=?,questions_json=?,closing_date=?,top_n=? WHERE id=?",
+                   (d["title"], d["area"], d["description"], d["must"], d["nice"], d["min_years"], d["boss_id"], d["published"],
+                    json.dumps(d["items"], ensure_ascii=False), json.dumps(d["questions"], ensure_ascii=False), d["closing"], d["top_n"], vid))
+        audit(db, user["id"], "vacante_editada", "vacante", vid, d["title"])
+    return go(request, f"/vacancies/{vid}", "Convocatoria actualizada. Vuelve a ejecutar el agente para recalcular el ranking.")
 
 
 @app.post("/vacancies/{vid}/toggle-status")
@@ -202,6 +230,8 @@ def vacancy_toggle(request: Request, vid: int, user=Depends(require("reclutador"
         v = _own_vacancy(db, vid, user)
         new = "abierta" if v["status"] == "cerrada" else "cerrada"
         db.execute("UPDATE vacancies SET status=? WHERE id=?", (new, vid))
+        if new == "cerrada":
+            ranking.purge_originals(db, vid)
         audit(db, user["id"], "vacante_" + ("cerrada" if new == "cerrada" else "reabierta"), "vacante", vid)
     return go(request, f"/vacancies/{vid}", "Vacante cerrada." if new == "cerrada" else "Vacante reabierta.")
 
@@ -230,14 +260,6 @@ def task_cvs(user=Depends(require("reclutador"))):
                     headers={"Content-Disposition": "attachment; filename=CV_de_practica.zip"})
 
 
-def _own_vacancy(db, vid: int, user):
-    """Vacante de la empresa del usuario (multiempresa: nadie ve vacantes de otra empresa)."""
-    v = db.execute("SELECT * FROM vacancies WHERE id=?", (vid,)).fetchone()
-    if not v or not user["company_id"] or v["company_id"] != user["company_id"]:
-        raise HTTPException(404, "Vacante no encontrada.")
-    return v
-
-
 def _check_boss(db, boss_id: int, user):
     ok = db.execute("SELECT 1 FROM users WHERE id=? AND role='jefe' AND company_id=?", (boss_id, user["company_id"])).fetchone()
     if not ok:
@@ -248,10 +270,11 @@ def _check_boss(db, boss_id: int, user):
 def vacancy_detail(request: Request, vid: int, user=Depends(require("reclutador"))):
     with get_db() as db:
         v = _own_vacancy(db, vid, user)
-        cands = db.execute(
-            "SELECT * FROM candidates WHERE vacancy_id=? ORDER BY score IS NULL, score DESC, id", (vid,)).fetchall()
+        cands = db.execute("SELECT * FROM candidates WHERE vacancy_id=?", (vid,)).fetchall()
         boss = db.execute("SELECT name FROM users WHERE id=?", (v["boss_id"],)).fetchone()
-    return page(request, "vacancy_detail.html", v=vacancy_dict(v), cands=cands, boss=boss)
+    vd = vacancy_dict(v)
+    rows = ranking.decorate(cands, vd)
+    return page(request, "vacancy_detail.html", v=vd, cands=rows, boss=boss, n_top=sum(1 for r in rows if r["in_top"]), n_sel=sum(1 for r in rows if r["shortlisted"]))
 
 
 @app.post("/vacancies/{vid}/upload")
@@ -275,8 +298,8 @@ async def upload(request: Request, vid: int, files: list[UploadFile] = File(...)
             except Exception:
                 bad += 1
                 continue
-            db.execute("INSERT INTO candidates(vacancy_id,filename,redacted_text) VALUES(?,?,?)",
-                       (vid, f.filename, redact(text)))
+            db.execute("INSERT INTO candidates(vacancy_id,filename,redacted_text,original_file,original_mime,applicant_name,source) VALUES(?,?,?,?,?,?,'reclutamiento')",
+                       (vid, f.filename, redact(text), data, f.content_type, os.path.splitext(f.filename)[0][:80]))
             ok += 1
         audit(db, user["id"], "cv_cargados", "vacante", vid, f"{ok} cargados, {bad} rechazados; declaración de consentimiento aceptada")
     msg = f"{ok} CV cargado(s) y anonimizado(s)." + (f" {bad} no se pudieron leer." if bad else "")
@@ -302,14 +325,6 @@ def delete_cvs(request: Request, vid: int, user=Depends(require("reclutador"))):
         db.execute("DELETE FROM candidates WHERE vacancy_id=?", (vid,))
         audit(db, user["id"], "cv_eliminados_todos", "vacante", vid)
     return go(request, f"/vacancies/{vid}", "Todos los CV de la vacante fueron eliminados.")
-
-
-def _own_candidate(db, cid: int, user):
-    c = db.execute("SELECT c.*, v.company_id AS vac_company FROM candidates c JOIN vacancies v ON v.id=c.vacancy_id WHERE c.id=?",
-                   (cid,)).fetchone()
-    if not c or not user["company_id"] or c["vac_company"] != user["company_id"]:
-        raise HTTPException(404, "Candidato no encontrado.")
-    return c
 
 
 @app.post("/candidates/{cid}/shortlist")
@@ -346,9 +361,9 @@ def shortlist_view(request: Request, vid: int, user=Depends(require("jefe"))):
         v = db.execute("SELECT * FROM vacancies WHERE id=? AND boss_id=?", (vid, user["id"])).fetchone()
         if not v:
             raise HTTPException(404, "Vacante no encontrada.")
-        cands = db.execute("SELECT * FROM candidates WHERE vacancy_id=? AND shortlisted=1 ORDER BY score DESC",
-                           (vid,)).fetchall()
-    return page(request, "shortlist.html", v=vacancy_dict(v), cands=cands)
+        cands = db.execute("SELECT * FROM candidates WHERE vacancy_id=? AND shortlisted=1", (vid,)).fetchall()
+    vd = vacancy_dict(v)
+    return page(request, "shortlist.html", v=vd, cands=ranking.decorate(cands, vd))
 
 
 @app.post("/candidates/{cid}/decision")
@@ -526,3 +541,6 @@ def admin_audit(request: Request, user=Depends(require("admin"))):
 
 
 app.include_router(public.router)
+
+
+app.include_router(features.router)

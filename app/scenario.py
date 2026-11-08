@@ -51,8 +51,11 @@ def prepare_for_jefes(actor_id: int | None = None) -> dict:
                 "INSERT INTO vacancies(title,area,description,must,nice,min_years,owner_id,boss_id,company_id) VALUES(?,?,?,?,?,?,?,?,?)",
                 (TITLE, "Operaciones", "Analizar datos de ventas y logística, construir reportes y tableros para la gerencia.",
                  "SQL, Excel, Power BI", "Python, ERP, inglés", 1, owner["id"], j["id"], j["company_id"]))
-            for name, text in cv_files():
-                db.execute("INSERT INTO candidates(vacancy_id,filename,redacted_text) VALUES(?,?,?)", (vid, name, redact(text)))
+            for n, (name, text) in enumerate(cv_files(), 1):
+                db.execute(
+                    "INSERT INTO candidates(vacancy_id,filename,redacted_text,original_file,original_mime,applicant_name,applicant_email,applicant_phone,applicant_district,source)"
+                    " VALUES(?,?,?,?,?,?,?,?,?,'reclutamiento')",
+                    (vid, name, redact(text), text.encode("utf-8"), "text/plain", f"Candidato de práctica {n:02d}", f"practica{n:02d}@example.com", f"9000000{n:02d}", "Trujillo"))
             new_vids.append(vid)
     for vid in new_vids:
         run_agent(vid)

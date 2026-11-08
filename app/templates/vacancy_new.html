@@ -1,18 +1,13 @@
-{% extends "base.html" %}{% block title %}Nueva vacante{% endblock %}
+{% extends "base.html" %}{% block title %}Nueva convocatoria{% endblock %}
 {% block content %}
-<h1>Nueva vacante</h1><p class="sub">Define lo que busca el puesto. El agente usará estos criterios para ordenar los CV.</p>
+<h1>Nueva convocatoria</h1><p class="sub">Define lo que busca el puesto. El agente usará estos criterios para ordenar los CV.</p>
+<form class="card row" method="get" action="/vacancies/new">
+  <label style="margin:0">Empezar desde una plantilla</label>
+  <select name="plantilla" style="width:auto"><option value="">En blanco</option>{% for t in plantillas %}<option value="{{ t.slug }}" {{ 'selected' if t.slug == plantilla }}>{{ t.title }}</option>{% endfor %}</select>
+  <button class="btn ghost small">Cargar plantilla</button>
+</form>
 <form class="card" method="post" action="/vacancies/new">
-  <label>Puesto</label><input type="text" name="title" required placeholder="Ej.: Analista de datos junior">
-  <label>Área</label><input type="text" name="area" required placeholder="Ej.: Operaciones">
-  <label>Descripción del puesto</label><textarea name="description" required placeholder="Funciones principales y contexto del puesto"></textarea>
-  <label>Requisitos obligatorios <span class="hint">separados por comas</span></label>
-  <input type="text" name="must" placeholder="Ej.: SQL, Excel, Power BI">
-  <label>Requisitos deseables <span class="hint">separados por comas</span></label>
-  <input type="text" name="nice" placeholder="Ej.: Python, ERP, inglés">
-  <label>Años mínimos de experiencia</label><input type="number" name="min_years" min="0" step="0.5" value="1">
-  <label>Jefe de área que decidirá</label>
-  <select name="boss_id" required>{% for b in bosses %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
-  <label style="font-weight:500"><input type="checkbox" name="published" value="1" checked style="width:auto;margin-right:8px">Publicar en el portal de empleos para que los postulantes puedan postular</label>
-  <p><button class="btn">Crear vacante</button></p>
+  {% include "_vacancy_form.html" %}
+  <p><button class="btn">Crear convocatoria</button></p>
 </form>
 {% endblock %}

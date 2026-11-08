@@ -1,16 +1,8 @@
-{% extends "base.html" %}{% block title %}Editar vacante{% endblock %}
+{% extends "base.html" %}{% block title %}Editar convocatoria{% endblock %}
 {% block content %}
-<h1>Editar vacante</h1><p class="sub">Si cambias los requisitos, vuelve a ejecutar el agente para recalcular el ranking.</p>
+<h1>Editar convocatoria</h1><p class="sub">Si cambias los requisitos, vuelve a ejecutar el agente para recalcular el ranking.</p>
 <form class="card" method="post" action="/vacancies/{{ v.id }}/edit">
-  <label>Puesto</label><input type="text" name="title" required value="{{ v.title }}">
-  <label>Área</label><input type="text" name="area" required value="{{ v.area }}">
-  <label>Descripción del puesto</label><textarea name="description" required>{{ v.description }}</textarea>
-  <label>Requisitos obligatorios <span class="hint">separados por comas</span></label><input type="text" name="must" value="{{ v.must }}">
-  <label>Requisitos deseables <span class="hint">separados por comas</span></label><input type="text" name="nice" value="{{ v.nice }}">
-  <label>Años mínimos de experiencia</label><input type="number" name="min_years" min="0" step="0.5" value="{{ v.min_years }}">
-  <label>Jefe de área que decidirá</label>
-  <select name="boss_id" required>{% for b in bosses %}<option value="{{ b.id }}" {{ 'selected' if b.id == v.boss_id }}>{{ b.name }}</option>{% endfor %}</select>
-  <label style="font-weight:500"><input type="checkbox" name="published" value="1" {{ 'checked' if v.published }} style="width:auto;margin-right:8px">Publicada en el portal de empleos</label>
+  {% include "_vacancy_form.html" %}
   <p><button class="btn">Guardar cambios</button> <a class="btn ghost" href="/vacancies/{{ v.id }}">Cancelar</a></p>
 </form>
 {% endblock %}

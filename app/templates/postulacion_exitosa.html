@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block title %}Postulación exitosa{% endblock %}
+{% block content %}
+<div class="card empty" style="margin-top:30px">
+  <div class="big" style="color:var(--ok)">¡Postulación exitosa!</div>
+  <p>Postulaste a <b>{{ c.vtitle }}</b> en <b>{{ c.company }}</b>.</p>
+  <p class="hint">El equipo de selección revisará tu postulación. Puedes ver cómo avanza en «Mis postulaciones».</p>
+  <p class="row" style="justify-content:center"><a class="btn" href="/mis-postulaciones">Ver mis postulaciones</a><a class="btn ghost" href="/empleos">Seguir viendo convocatorias</a></p>
+</div>
+{% endblock %}

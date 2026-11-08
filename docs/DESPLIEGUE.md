@@ -57,3 +57,10 @@ Verifícalo en Render → Settings → Build & Deploy → Auto-Deploy → *After
 3. Entra como reclutamiento de esa empresa, crea una vacante y deja marcada la casilla de publicarla.
 4. Abre `/empleos` en una ventana privada, postula con un CV y guarda el código; luego revisa el estado en `/postulacion/<código>`.
 5. Pulsa **Preparar escenario** para que cada jefe de área reciba su lista corta de práctica.
+
+## Versión 1.3: pasos tras actualizar
+1. Sube los cambios (`git pull --rebase`, `git add .`, `git commit`, `git push`). Render instala `openpyxl` al construir y la base de Supabase se migra sola al iniciar (nuevas columnas y el perfil «postulante»).
+2. Como investigación, en *Empresas y participantes*: registra la empresa, crea una cuenta de reclutamiento y una de jefe de área, y pulsa **Cargar convocatorias de ejemplo**.
+3. Abre `/registro` en una ventana privada, crea una cuenta de postulante y postula a una convocatoria con un CV de `CVs_sinteticos_por_carrera.zip`.
+4. Como reclutamiento: abre la convocatoria, ejecuta el agente, envía el top al jefe y descarga los seleccionados.
+5. Como jefe: revisa los CV, decide y programa la entrevista.

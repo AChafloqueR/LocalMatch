@@ -18,8 +18,8 @@
 <form class="card" method="post" action="/admin/companies">
   <h2>Registrar una empresa</h2>
   <div class="row"><input class="grow" type="text" name="name" required placeholder="Nombre de la empresa"><button class="btn">Crear empresa</button></div>
-  {% if companies %}<table style="margin-top:14px"><tr><th>Empresa</th><th>Reclutamiento</th><th>Jefes de área</th><th>Vacantes</th></tr>
-  {% for c in companies %}<tr><td>{{ c.name }} <span class="hint">(id {{ c.id }})</span></td><td>{{ c.rec }}</td><td>{{ c.jef }}</td><td>{{ c.vac }}</td></tr>{% endfor %}</table>{% endif %}
+  {% if companies %}<table style="margin-top:14px"><tr><th>Empresa</th><th>Reclutamiento</th><th>Jefes de área</th><th>Convocatorias</th><th></th></tr>
+  {% for c in companies %}<tr><td>{{ c.name }} <span class="hint">(id {{ c.id }})</span></td><td>{{ c.rec }}</td><td>{{ c.jef }}</td><td>{{ c.vac }}</td><td><button class="btn ghost small" formaction="/admin/companies/{{ c.id }}/demo" formmethod="post" formnovalidate>Cargar convocatorias de ejemplo</button></td></tr>{% endfor %}</table>{% endif %}
 </form>
 
 <form class="card" method="post" action="/admin/scenario">

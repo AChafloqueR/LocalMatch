@@ -8,16 +8,17 @@
   <a class="logo" href="/">Local<span>Match</span></a>
   {% if not user %}
   <nav class="links"><a href="/empleos">Empleos</a></nav>
-  <a class="btn ghost small" href="/login">Ingresar (empresas)</a>
+  <a class="btn ghost small" href="/registro">Crear cuenta</a><a class="btn small" href="/login">Ingresar</a>
   {% endif %}
   {% if user %}
   <nav class="links">
-    <a href="/dashboard">Inicio</a>
-    {% if user.role == 'reclutador' %}<a href="/vacancies/new">Nueva vacante</a>{% endif %}
+    {% if user.role == 'postulante' %}<a href="/empleos">Convocatorias</a><a href="/mis-postulaciones">Mis postulaciones</a>{% else %}<a href="/dashboard">Inicio</a>{% endif %}
+    {% if user.role == 'reclutador' %}<a href="/vacancies/new">Nueva convocatoria</a>{% endif %}
     {% if user.role in ('reclutador','jefe') %}<a href="/sus">Evaluación SUS</a>{% endif %}
+    {% if user.role != 'postulante' %}<a href="/empleos" target="_blank" rel="noopener">Portal de empleos</a>{% endif %}
     {% if user.role == 'admin' %}<a href="/admin/sus">Resultados SUS</a><a href="/admin/users">Participantes</a><a href="/admin/audit">Auditoría</a>{% endif %}
   </nav>
-  <span class="who">{{ user.name }}{% if user.company %} · {{ user.company }}{% endif %} · {{ {'reclutador':'Reclutamiento','jefe':'Jefe de área','admin':'Investigación'}[user.role] }}</span>
+  <span class="who">{{ user.name }}{% if user.company %} · {{ user.company }}{% endif %} · {{ {'reclutador':'Reclutamiento','jefe':'Jefe de área','admin':'Investigación','postulante':'Postulante'}[user.role] }}</span>
   <form method="post" action="/logout"><button class="btn ghost small">Salir</button></form>
   {% endif %}
 </div></header>

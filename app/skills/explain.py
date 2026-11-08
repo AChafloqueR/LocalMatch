@@ -10,7 +10,7 @@ def explain(vac: dict, profile: dict, sc: dict) -> str:
         + ". "
     )
     if sc["must_missing"]:
-        base += f"No se evidenció: {', '.join(sc['must_missing'])}. "
+        base += f"No cumple requisitos excluyentes (no se evidenció): {', '.join(sc['must_missing'])}. "
     if profile["nice_found"]:
         base += f"Aporta además: {', '.join(profile['nice_found'])}. "
     mn = vac.get("min_years") or 0
