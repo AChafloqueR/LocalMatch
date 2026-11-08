@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block title %}Empleos · LocalMatch{% endblock %}
+{% block content %}
+<h1>Empleos en empresas de Trujillo</h1>
+<p class="sub">Elige una vacante y postula con tu CV. Tu CV se anonimiza antes de ser evaluado.</p>
+<form method="get" action="/empleos" class="row" style="margin-bottom:18px">
+  <input class="grow" type="text" name="q" value="{{ q }}" placeholder="Busca por puesto, área o empresa">
+  <button class="btn">Buscar</button>
+</form>
+{% if rows %}<div class="grid">
+{% for v in rows %}
+  <div class="card">
+    <span class="badge">{{ v.area }}</span>
+    <h2 style="margin-top:10px">{{ v.title }}</h2>
+    <p class="hint" style="margin-top:-6px">{{ v.company }}</p>
+    <p style="font-size:14px">{{ v.short }}</p>
+    <div class="chips">{% for t in v.must_list %}<span>{{ t }}</span>{% endfor %}</div>
+    <p style="margin-top:14px"><a class="btn small" href="/empleos/{{ v.id }}">Ver y postular</a></p>
+  </div>
+{% endfor %}</div>
+{% else %}<div class="card empty">No hay vacantes publicadas por ahora.</div>{% endif %}
+<form class="card" method="get" action="/postulacion" style="margin-top:22px">
+  <h2>Consulta el estado de tu postulación</h2>
+  <div class="row"><input class="grow" type="text" name="code" placeholder="Tu código de seguimiento (por ejemplo, 9F3A1C2B)"><button class="btn ghost">Consultar</button></div>
+</form>
+{% endblock %}

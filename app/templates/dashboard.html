@@ -6,7 +6,19 @@
 {% elif user.role == 'jefe' %}Aquí ves los candidatos que el equipo de reclutamiento te envió, con la explicación de cada puntaje.
 {% else %}Panel de investigación: consulta los resultados de la evaluación SUS.{% endif %}</p>
 
-{% if user.role in ('reclutador','jefe') and not sus_done %}
+{% if task and task.steps %}
+<div class="card">
+  <h2>Tu tarea del estudio</h2>
+  <p class="hint">Completa estos pasos con el agente. Al terminar se habilita el cuestionario de usabilidad (SUS).</p>
+  {% for label, ok in task.steps %}
+  <div class="row" style="margin:6px 0"><span class="badge {{ 'ok' if ok else '' }}">{{ '✓' if ok else loop.index }}</span><span>{{ label }}</span></div>
+  {% endfor %}
+  {% if user.role == 'reclutador' %}<p><a class="btn ghost small" href="/task/cvs.zip">Descargar CV de práctica</a></p>
+  {% elif not task.steps[0][1] %}<p class="hint">Aún no tienes una lista corta asignada. Pide al equipo de investigación que prepare tu escenario.</p>{% endif %}
+</div>
+{% endif %}
+
+{% if user.role in ('reclutador','jefe') and not sus_done and (not task or task.done) %}
 <div class="card row" style="background:var(--brand-soft);border-color:transparent">
   <div class="grow"><b>Evalúa la usabilidad de LocalMatch</b><div class="hint">Son 10 afirmaciones y toma unos 3 minutos. Tu respuesta ayuda a un estudio académico.</div></div>
   <a class="btn" href="/sus">Responder el SUS</a>

@@ -12,6 +12,7 @@
   <label>Años mínimos de experiencia</label><input type="number" name="min_years" min="0" step="0.5" value="1">
   <label>Jefe de área que decidirá</label>
   <select name="boss_id" required>{% for b in bosses %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+  <label style="font-weight:500"><input type="checkbox" name="published" value="1" checked style="width:auto;margin-right:8px">Publicar en el portal de empleos para que los postulantes puedan postular</label>
   <p><button class="btn">Crear vacante</button></p>
 </form>
 {% endblock %}

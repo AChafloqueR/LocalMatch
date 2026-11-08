@@ -23,7 +23,8 @@ def current_user(request: Request):
     if not uid:
         return None
     with get_db() as db:
-        return db.execute("SELECT id,email,name,role FROM users WHERE id=?", (uid,)).fetchone()
+        return db.execute("SELECT u.id,u.email,u.name,u.role,u.company_id,c.name AS company FROM users u "
+                          "LEFT JOIN companies c ON c.id=u.company_id WHERE u.id=?", (uid,)).fetchone()
 
 
 class NeedLogin(Exception):

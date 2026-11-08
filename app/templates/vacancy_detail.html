@@ -1,8 +1,14 @@
 {% extends "base.html" %}{% block title %}{{ v.title }}{% endblock %}
 {% block content %}
-<span class="badge">{{ v.area }}</span>
+<span class="badge">{{ v.area }}</span> {% if v.status == 'cerrada' %}<span class="badge bad">Cerrada</span>{% endif %}
 <h1 style="margin-top:8px">{{ v.title }}</h1>
 <p class="sub">Jefe de área: {{ boss.name if boss else '—' }} · mínimo {{ '%g'|format(v.min_years) }} año(s) de experiencia</p>
+
+<div class="row" style="margin-bottom:12px">
+  <a class="btn ghost small" href="/vacancies/{{ v.id }}/edit">Editar vacante</a>
+  <form method="post" action="/vacancies/{{ v.id }}/toggle-status"><button class="btn ghost small">{{ 'Reabrir vacante' if v.status == 'cerrada' else 'Cerrar vacante' }}</button></form>
+  {% if cands %}<a class="btn ghost small" href="/vacancies/{{ v.id }}/ranking.csv">Exportar ranking (CSV)</a>{% endif %}
+</div>
 
 <div class="card">
   <div class="chips"><b style="font-size:13px">Obligatorios:</b> {% for t in v.must_list %}<span>{{ t }}</span>{% else %}<span class="hint">ninguno</span>{% endfor %}
@@ -11,10 +17,11 @@
 
 <div class="card">
   <h2>1 · Sube los CV</h2>
-  <form method="post" action="/vacancies/{{ v.id }}/upload" enctype="multipart/form-data" class="row">
+  <form id="upl" method="post" action="/vacancies/{{ v.id }}/upload" enctype="multipart/form-data" class="row">
     <input class="grow" type="file" name="files" multiple accept=".pdf,.docx,.txt" required>
     <button class="btn ghost">Subir y anonimizar</button>
   </form>
+  <label style="font-weight:500;margin-top:10px"><input type="checkbox" name="consent" value="1" form="upl" style="width:auto;margin-right:8px">Declaro que estos CV son sintéticos (ficticios) o que cuento con el consentimiento de sus titulares.</label>
   <p class="hint">PDF, DOCX o TXT. Antes de evaluar, se omiten nombre, contacto, documento de identidad, edad, sexo y estado civil.</p>
 </div>
 
@@ -31,9 +38,12 @@
 <div class="card cand">
   <div class="rank">{{ loop.index }}<small>puesto</small></div>
   <div>
-    <div class="row"><b>Candidato #{{ c.id }}</b><span class="hint">{{ c.filename }}</span>
+    <div class="row"><b>Candidato #{{ c.id }}</b>
+      {% if c.source == 'postulante' %}<span class="badge">Postulante</span>{% else %}<span class="badge">Carga interna</span>{% endif %}
+      <span class="hint">{{ c.filename }}</span>
       {% if c.shortlisted %}<span class="badge ok">Enviado al jefe</span>{% endif %}
       {% if c.decision %}<span class="badge {{ 'ok' if c.decision=='Entrevistar' else ('warn' if c.decision=='En espera' else 'bad') }}">Jefe: {{ c.decision }}</span>{% endif %}</div>
+    {% if c.applicant_name %}<p class="ev" style="margin:6px 0"><b>Contacto:</b> {{ c.applicant_name }} · {{ c.applicant_email }}{% if c.applicant_phone %} · {{ c.applicant_phone }}{% endif %} · código {{ c.tracking_code }}</p>{% endif %}
     {% if c.score is not none %}
       <div class="bar"><i style="width:{{ c.score }}%"></i></div>
       <b>{{ c.score }}</b> <span class="hint">de 100 puntos</span>

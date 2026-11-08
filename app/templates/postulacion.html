@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block title %}Tu postulación{% endblock %}
+{% block content %}
+<h1>Tu postulación</h1>
+<p class="sub">{{ c.vtitle }} · {{ c.company }}</p>
+<div class="card">
+  <p class="hint">Tu código de seguimiento (guárdalo, lo necesitas para consultar el estado)</p>
+  <div class="big" style="letter-spacing:.08em">{{ code }}</div>
+  <p style="margin-top:14px"><span class="badge {{ tone }}">{{ status }}</span></p>
+  <p class="hint">Postulaste el {{ c.created_at }}. El estado se actualiza cuando el equipo de selección avanza con tu postulación.</p>
+</div>
+<div class="card">
+  <h2>Tus datos</h2>
+  <p class="hint">Puedes pedir que eliminemos tu postulación y tu CV en cualquier momento.</p>
+  <form method="post" action="/postulacion/{{ code }}/eliminar" onsubmit="return confirm('¿Eliminar tu postulación y tu CV? No se puede deshacer.')"><button class="btn danger">Eliminar mi postulación</button></form>
+</div>
+{% endblock %}

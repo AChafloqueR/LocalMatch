@@ -9,15 +9,15 @@ import sys
 from pathlib import Path
 
 from app.auth import hash_password
-from app.db import get_db, init_db
+from app.db import get_db, get_or_create_company, init_db
 from app.parsing import extract_text
 from app.skills.redact import redact
 
 
-def make_user(db, email, name, role, password=None):
+def make_user(db, email, name, role, password=None, company_id=None):
     password = password or secrets.token_urlsafe(9)
-    db.execute("INSERT OR IGNORE INTO users(email,name,role,pw_hash) VALUES(?,?,?,?)",
-               (email, name, role, hash_password(password)))
+    db.execute("INSERT OR IGNORE INTO users(email,name,role,pw_hash,company_id) VALUES(?,?,?,?,?)",
+               (email, name, role, hash_password(password), company_id))
     return password
 
 
@@ -26,6 +26,7 @@ def main():
     demo = "--demo" in sys.argv
     with get_db() as db:
         creds = []
+        empresa = get_or_create_company(db, "Empresa de práctica")
         for email, name, role in [
             ("admin@localmatch.local", "Equipo de investigación", "admin"),
             ("reclutadora@localmatch.local", "Rosa Reclutadora", "reclutador"),
@@ -33,16 +34,16 @@ def main():
         ]:
             if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
                 continue
-            creds.append((email, make_user(db, email, name, role), role))
+            creds.append((email, make_user(db, email, name, role, company_id=None if role == 'admin' else empresa), role))
         if demo:
             owner = db.execute("SELECT id FROM users WHERE email='reclutadora@localmatch.local'").fetchone()
             boss = db.execute("SELECT id FROM users WHERE email='jefe@localmatch.local'").fetchone()
             if owner and boss and not db.execute("SELECT 1 FROM vacancies").fetchone():
                 vid = db.insert(
-                    "INSERT INTO vacancies(title,area,description,must,nice,min_years,owner_id,boss_id) VALUES(?,?,?,?,?,?,?,?)",
+                    "INSERT INTO vacancies(title,area,description,must,nice,min_years,owner_id,boss_id,company_id,published) VALUES(?,?,?,?,?,?,?,?,?,?)",
                     ("Analista de datos junior", "Operaciones",
                      "Analizar datos de ventas y logística, construir reportes y tableros para la gerencia.",
-                     "SQL, Excel, Power BI", "Python, ERP, inglés", 1, owner["id"], boss["id"]))
+                     "SQL, Excel, Power BI", "Python, ERP, inglés", 1, owner["id"], boss["id"], empresa, 1))
                 for f in sorted(Path("samples").glob("*.txt")):
                     db.execute("INSERT INTO candidates(vacancy_id,filename,redacted_text) VALUES(?,?,?)",
                                (vid, f.name, redact(extract_text(f.name, f.read_bytes()))))

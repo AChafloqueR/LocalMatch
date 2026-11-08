@@ -40,12 +40,20 @@ Verifícalo en Render → Settings → Build & Deploy → Auto-Deploy → *After
 
 ## 4. Primer uso en producción
 1. Entra con `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
-2. **Participantes**: crea una cuenta de reclutamiento y una de jefe de área (para probar), y luego en lote las de los 30 + 30 del estudio (descarga el CSV con las contraseñas).
-3. Ingresa como reclutamiento → crea una vacante → sube CV → ejecuta el agente.
-4. Los participantes responden el SUS en `/sus`. Tú descargas `/admin/sus.csv` y corres `analysis/sus_analysis.py`.
+2. **Empresas y participantes**: crea una cuenta de reclutamiento y una de jefe de área (para probar), y luego en lote las de los 30 + 30 del estudio (descarga el CSV con las contraseñas).
+3. **Preparar escenario:** en *Participantes*, pulsa *Preparar escenario* después de crear las cuentas de jefes de área (cada jefe recibe su vacante de práctica con lista corta).
+4. Ingresa como reclutamiento → crea una vacante → sube CV → ejecuta el agente.
+5. Los participantes completan su tarea (en *Inicio*) y luego responden el SUS en `/sus`. Tú descargas `/admin/sus.csv` y corres `analysis/sus_analysis.py`.
 
 ## Cosas que debes saber
 - **Plan gratuito de Render:** el servicio se "duerme" tras 15 minutos sin visitas y tarda ~50 segundos en despertar. Antes de cada sesión del estudio, abre la URL unos minutos antes.
 - **Datos personales:** los CV se guardan anonimizados en la base de datos en la nube. Pide consentimiento, borra los CV al terminar (botón *Eliminar todos los CV*) y no subas CV reales sin autorización.
 - **Contraseñas:** nunca las pongas en el código ni en GitHub. Solo en las variables de entorno de Render.
 - **Si cambias el código:** `git add . && git commit -m "mensaje" && git push`. GitHub corre las pruebas y Render despliega si pasan.
+
+## Versión 1.2: pasos tras actualizar
+1. Sube los cambios (`git add .`, `git commit`, `git push`). Al iniciar, la base de Supabase se migra sola.
+2. Entra como investigación > *Empresas y participantes* > **Registrar una empresa** y crea sus cuentas (en lote o una por una).
+3. Entra como reclutamiento de esa empresa, crea una vacante y deja marcada la casilla de publicarla.
+4. Abre `/empleos` en una ventana privada, postula con un CV y guarda el código; luego revisa el estado en `/postulacion/<código>`.
+5. Pulsa **Preparar escenario** para que cada jefe de área reciba su lista corta de práctica.

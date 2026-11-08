@@ -2,7 +2,14 @@
 {% block content %}
 <h1>Evaluación de usabilidad</h1>
 <p class="sub">Cuestionario System Usability Scale (SUS) · Perfil: {{ profile }}</p>
-{% if done %}
+{% if not unlocked and not done %}
+<div class="card">
+  <h2>Primero completa tu tarea</h2>
+  <p class="hint">El cuestionario se habilita al terminar estos pasos con el agente.</p>
+  {% for label, ok in task.steps %}<div class="row" style="margin:6px 0"><span class="badge {{ 'ok' if ok else '' }}">{{ '✓' if ok else loop.index }}</span><span>{{ label }}</span></div>{% endfor %}
+  <p><a class="btn" href="/dashboard">Ir a mi tarea</a></p>
+</div>
+{% elif done %}
 <div class="card empty"><div class="big">¡Gracias!</div><p>Tu evaluación ya fue registrada. Puedes cerrar esta página.</p></div>
 {% else %}
 <form class="card" method="post" action="/sus">

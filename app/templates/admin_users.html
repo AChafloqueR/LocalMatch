@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block title %}Participantes{% endblock %}
 {% block content %}
-<h1>Participantes</h1>
-<p class="sub">Crea las cuentas de los 30 + 30 usuarios del estudio. Las contraseñas se muestran una sola vez.</p>
+<h1>Empresas y participantes</h1>
+<p class="sub">Registra las empresas y crea las cuentas de su personal de reclutamiento y de sus jefes de área. Las contraseñas se muestran una sola vez.</p>
 
 {% if created %}
 <div class="card" style="background:var(--ok-soft);border-color:transparent">
@@ -12,14 +12,29 @@
 <div class="grid">
   <div class="card"><span class="badge">Reclutamiento</span><div class="big">{{ counts.get('reclutador', 0) }}</div><div class="hint">cuentas creadas</div></div>
   <div class="card"><span class="badge">Jefes de área</span><div class="big">{{ counts.get('jefe', 0) }}</div><div class="hint">cuentas creadas</div></div>
+  <div class="card"><span class="badge">Empresas</span><div class="big">{{ companies|length }}</div><div class="hint">registradas</div></div>
 </div>
+
+<form class="card" method="post" action="/admin/companies">
+  <h2>Registrar una empresa</h2>
+  <div class="row"><input class="grow" type="text" name="name" required placeholder="Nombre de la empresa"><button class="btn">Crear empresa</button></div>
+  {% if companies %}<table style="margin-top:14px"><tr><th>Empresa</th><th>Reclutamiento</th><th>Jefes de área</th><th>Vacantes</th></tr>
+  {% for c in companies %}<tr><td>{{ c.name }} <span class="hint">(id {{ c.id }})</span></td><td>{{ c.rec }}</td><td>{{ c.jef }}</td><td>{{ c.vac }}</td></tr>{% endfor %}</table>{% endif %}
+</form>
+
+<form class="card" method="post" action="/admin/scenario">
+  <h2>Preparar escenario para jefes de área</h2>
+  <p class="hint">Crea, para cada jefe de área, una vacante de práctica en su empresa con 10 CV sintéticos y una lista corta de 5 candidatos ya generada. No se publica en el portal de empleos y no repite a quienes ya la tienen.</p>
+  <button class="btn">Preparar escenario</button>
+</form>
 
 <form class="card" method="post" action="/admin/users/bulk">
   <h2>Crear cuentas en lote</h2>
-  <p class="hint">Genera cuentas rec01, rec02… o jef01, jef02… y descarga un CSV con las contraseñas. Entrégalas por un canal privado.</p>
+  <p class="hint">Genera cuentas rec01, rec02… o jef01, jef02… para una empresa y descarga un CSV con las contraseñas. Entrégalas por un canal privado.</p>
   <div class="row">
+    <select name="company_id" required style="width:auto"><option value="">Empresa…</option>{% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
     <select name="role" style="width:auto"><option value="reclutador">Personal de reclutamiento</option><option value="jefe">Jefes de área</option></select>
-    <input type="number" name="count" value="30" min="1" max="100" style="width:100px">
+    <input type="number" name="count" value="5" min="1" max="100" style="width:100px">
     <button class="btn">Crear y descargar CSV</button>
   </div>
 </form>
@@ -30,6 +45,8 @@
   <label>Correo</label><input type="email" name="email" required>
   <label>Perfil</label>
   <select name="role"><option value="reclutador">Personal de reclutamiento</option><option value="jefe">Jefe de área</option><option value="admin">Investigación</option></select>
+  <label>Empresa <span class="hint">(no aplica a investigación)</span></label>
+  <select name="company_id"><option value="">Sin empresa</option>{% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
   <p><button class="btn">Crear cuenta</button></p>
 </form>
 {% endblock %}

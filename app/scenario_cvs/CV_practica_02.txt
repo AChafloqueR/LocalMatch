@@ -1,0 +1,18 @@
+Mateo Mendoza Zavaleta
+Trujillo, La Libertad
+Correo: mateo.04@example.com
+Celular: 941 223 735
+Edad: 38 años
+
+PERFIL
+Analista de reportes con 5 año(s) de experiencia en servicios. Elaboración de reportes y seguimiento de indicadores.
+
+EXPERIENCIA
+2023–2025 · Distribuidora Chimú E.I.R.L. · Analista de reportes
+2017–2019 · Servicios Contables Andina E.I.R.L. · Asistente administrativo
+
+FORMACIÓN
+Egresado en Administración, Universidad Tecnológica de La Libertad.
+
+HABILIDADES
+SQL, Excel avanzado (tablas dinámicas), Power BI, PowerPoint, Minitab
