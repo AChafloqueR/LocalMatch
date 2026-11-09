@@ -1,10 +1,11 @@
 {% extends "base.html" %}{% block title %}Inicio · LocalMatch{% endblock %}
 {% block content %}
-<h1>Hola, {{ user.name.split()[0] }}</h1>
-<p class="sub">
-{% if user.role == 'reclutador' %}Crea una vacante, sube los CV y deja que el agente proponga un ranking que tú supervisas.
+<h1>Hola, {{ user.name }}</h1>
+<p class="sub" style="font-size:15px;margin-bottom:6px"><b>{{ {'reclutador':'Reclutamiento','jefe':'Jefe de Área','admin':'Administrador de LocalMatch'}[user.role] }}</b>{% if user.company %} · {{ user.company }}{% endif %}</p>
+<p class="hint" style="margin-top:0">
+{% if user.role == 'reclutador' %}Recibe los CV de tus convocatorias y deja que el agente proponga los mejores candidatos, que tú supervisas.
 {% elif user.role == 'jefe' %}Aquí ves los candidatos que el equipo de reclutamiento te envió, con la explicación de cada puntaje.
-{% else %}Panel de investigación: consulta los resultados de la evaluación SUS.{% endif %}</p>
+{% else %}Aquí ves las empresas que atiende LocalMatch, sus cuentas y sus convocatorias.{% endif %}</p>
 
 {% if task and task.steps %}
 <div class="card">
@@ -38,24 +39,38 @@
 {% endif %}
 
 {% if user.role == 'admin' %}
-<div class="card"><a class="btn" href="/admin/sus">Ver resultados SUS</a></div>
+<div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Empresas</h2>
+  <a class="btn ghost small" href="/admin/users">Gestionar empresas y cuentas</a><a class="btn ghost small" href="/admin/sus">Resultados SUS</a><a class="btn ghost small" href="/admin/audit">Auditoría</a></div>
+{% if companies %}<div class="grid">
+{% for c in companies %}
+  <div class="card"><h2>{{ c.name }}</h2>
+    <p class="hint">{{ c.rec }} reclutamiento · {{ c.jef }} jefe(s) de área<br>{{ c.vac }} convocatoria(s) · {{ c.post }} postulación(es)</p>
+    <a class="btn small" href="/admin/companies/{{ c.id }}">Ver empresa</a></div>
+{% endfor %}</div>
+{% else %}<div class="card empty">Aún no hay empresas. <a href="/admin/users"><b>Registra la primera</b></a>.</div>{% endif %}
+
+{% elif user.role == 'jefe' %}
+<h2>Candidatos que te enviaron</h2>
+{% for g in groups %}
+  <div class="row" style="margin:18px 0 6px"><span class="badge">{{ g.v.area }}</span><h2 class="grow" style="margin:0">{{ g.v.title }}</h2>
+    <a class="btn ghost small" href="/shortlists/{{ g.v.id }}/cvs.zip">Descargar todos los CV (ZIP)</a></div>
+  {% set cands = g.cands %}{% include '_boss_candidates.html' %}
 {% else %}
-<div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">{{ 'Mis vacantes' if user.role=='reclutador' else 'Vacantes asignadas a ti' }}</h2>
-{% if user.role=='reclutador' %}<a class="btn" href="/vacancies/new">+ Nueva vacante</a>{% endif %}</div>
+  <div class="card empty">Aún no tienes candidatos. Cuando el personal de reclutamiento te envíe candidatos de una convocatoria que te asignó, aparecerán aquí.</div>
+{% endfor %}
+{% if rows %}<p class="hint" style="margin-top:20px">Convocatorias asignadas a ti: {% for v in rows %}{{ v.title }} ({{ v.short }} candidato(s)){% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+
+{% else %}
+<div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Mis convocatorias</h2><a class="btn" href="/vacancies/new">+ Nueva convocatoria</a></div>
 {% if rows %}<div class="grid">
 {% for v in rows %}
   <div class="card">
     <span class="badge">{{ v.area }}</span>
     <h2 style="margin-top:10px">{{ v.title }}</h2>
-    {% if user.role=='reclutador' %}
-      <p class="hint">{{ v.n }} CV · {{ v.short }} enviados al jefe de área</p>
-      <a class="btn small" href="/vacancies/{{ v.id }}">Abrir vacante</a>
-    {% else %}
-      <p class="hint">{{ v.short }} candidato(s) en tu lista · {{ v.decided }} con decisión</p>
-      <a class="btn small" href="/shortlists/{{ v.id }}">Revisar candidatos</a>
-    {% endif %}
+    <p class="hint">{{ v.n }} CV · {{ v.short }} enviados al jefe de área</p>
+    <a class="btn small" href="/vacancies/{{ v.id }}">Abrir convocatoria</a>
   </div>
 {% endfor %}</div>
-{% else %}<div class="card empty">Aún no hay vacantes.</div>{% endif %}
+{% else %}<div class="card empty">Aún no hay convocatorias.</div>{% endif %}
 {% endif %}
 {% endblock %}

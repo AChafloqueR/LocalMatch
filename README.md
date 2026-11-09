@@ -10,6 +10,11 @@ Incluye perfiles diferenciados (reclutamiento / jefe de área / investigación) 
 4. El **jefe de área** ve candidatos anonimizados con su explicación y decide: entrevistar, en espera o descartar.
 5. Ambos perfiles responden el **SUS** dentro del sistema; el perfil de investigación descarga el CSV.
 
+## Novedades de la versión 1.4
+- **Inicio del jefe de área:** «Hola, [nombre]», su perfil en letras más pequeñas («Jefe de Área» y su empresa) y, debajo, los candidatos que la reclutadora le envió (con contacto, explicación, descarga de CV, decisión, entrevista y evaluación). Al enviar un candidato, reclutamiento ve el nombre y el correo del jefe que lo recibirá.
+- **Administrador de LocalMatch** (perfil `admin`, el que se crea con `ADMIN_EMAIL`): su inicio muestra todas las empresas con sus cuentas, convocatorias y postulaciones, y una ficha por empresa.
+- **Empresas de ejemplo:** botón para registrar NTT DATA, FISAC, TRC, Estudio Jurídico Muñoz, Backus y BRAMOTORS, cada una con una reclutadora, un jefe y sus convocatorias. Descarga un CSV con las credenciales (se muestran una sola vez). Son datos de demostración.
+
 ## Novedades de la versión 1.3 (flujo completo del postulante, reclutamiento y jefe de área)
 - **Postulante con cuenta:** se registra (con verificación simple), ve las convocatorias de todas las empresas, postula con celular (9 dígitos, empieza con 9), distrito, última experiencia, preguntas de la convocatoria, CV y confirmaciones (mayor de 18 años y consentimiento), y sigue el estado en **Mis postulaciones**. Una sola postulación por convocatoria y puede postular a varias.
 - **Convocatorias por empresa:** cada empresa crea las suyas, desde una **plantilla** (7 carreras) o en blanco. Requisitos objetivos de tipo herramienta, formación, certificación o idioma, con **peso**, carácter **excluyente** y **sinónimos**; hasta 3 preguntas de sí o no (excluyentes o no); fecha límite que cierra sola; top configurable de 3 a 10. No se usan edad, sexo ni estado civil.

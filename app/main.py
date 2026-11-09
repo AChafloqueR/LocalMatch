@@ -136,9 +136,17 @@ def dashboard(request: Request, user=Depends(require())):
                 " FROM vacancies v WHERE boss_id=? ORDER BY v.id DESC", (user["id"],)).fetchall()
         else:
             rows = []
+        groups = []
+        if user["role"] == "jefe":
+            for r in rows:
+                cs = db.execute("SELECT * FROM candidates WHERE vacancy_id=? AND shortlisted=1", (r["id"],)).fetchall()
+                if cs:
+                    vd = vacancy_dict(r)
+                    groups.append({"v": vd, "cands": ranking.decorate(cs, vd)})
         sus = db.execute("SELECT 1 FROM sus_responses WHERE user_id=?", (user["id"],)).fetchone()
     task = task_state(user) if user["role"] in ("reclutador", "jefe") else None
-    return page(request, "dashboard.html", rows=rows, sus_done=bool(sus), task=task, metrics=metrics)
+    companies = _companies() if user["role"] == "admin" else []
+    return page(request, "dashboard.html", rows=rows, sus_done=bool(sus), task=task, metrics=metrics, groups=groups, companies=companies)
 
 
 # ---------- reclutador: vacantes ----------
@@ -271,7 +279,7 @@ def vacancy_detail(request: Request, vid: int, user=Depends(require("reclutador"
     with get_db() as db:
         v = _own_vacancy(db, vid, user)
         cands = db.execute("SELECT * FROM candidates WHERE vacancy_id=?", (vid,)).fetchall()
-        boss = db.execute("SELECT name FROM users WHERE id=?", (v["boss_id"],)).fetchone()
+        boss = db.execute("SELECT name,email FROM users WHERE id=?", (v["boss_id"],)).fetchone()
     vd = vacancy_dict(v)
     rows = ranking.decorate(cands, vd)
     return page(request, "vacancy_detail.html", v=vd, cands=rows, boss=boss, n_top=sum(1 for r in rows if r["in_top"]), n_sel=sum(1 for r in rows if r["shortlisted"]))
@@ -333,7 +341,10 @@ def shortlist(request: Request, cid: int, user=Depends(require("reclutador"))):
         c = _own_candidate(db, cid, user)
         db.execute("UPDATE candidates SET shortlisted=? WHERE id=?", (0 if c["shortlisted"] else 1, cid))
         audit(db, user["id"], "candidato_retirado" if c["shortlisted"] else "candidato_enviado", "candidato", cid)
-    return go(request, f"/vacancies/{c['vacancy_id']}")
+        boss = db.execute("SELECT u.name, u.email FROM users u JOIN vacancies v ON v.boss_id=u.id WHERE v.id=?", (c["vacancy_id"],)).fetchone()
+    who = f"{boss['name']} ({boss['email']})" if boss else "el jefe de área"
+    msg = f"Quitaste al candidato de la lista de {who}." if c["shortlisted"] else f"Candidato enviado a {who}. Lo verá al ingresar con su cuenta."
+    return go(request, f"/vacancies/{c['vacancy_id']}", msg)
 
 
 @app.post("/candidates/{cid}/note")
@@ -379,7 +390,7 @@ def decision(request: Request, cid: int, decision: str = Form(...), decision_not
         db.execute("UPDATE candidates SET decision=?, decision_note=? WHERE id=?",
                    (decision, decision_note.strip()[:500], cid))
         audit(db, user["id"], "decision_jefe", "candidato", cid, decision)
-    return go(request, f"/shortlists/{c['vacancy_id']}", "Decisión registrada.")
+    return go(request, "/dashboard", "Decisión registrada.")
 
 
 # ---------- evaluación SUS ----------
@@ -449,7 +460,8 @@ def _companies():
             "SELECT c.id, c.name,"
             " (SELECT COUNT(*) FROM users u WHERE u.company_id=c.id AND u.role='reclutador' AND u.email NOT LIKE ?) AS rec,"
             " (SELECT COUNT(*) FROM users u WHERE u.company_id=c.id AND u.role='jefe') AS jef,"
-            " (SELECT COUNT(*) FROM vacancies v WHERE v.company_id=c.id) AS vac"
+            " (SELECT COUNT(*) FROM vacancies v WHERE v.company_id=c.id) AS vac,"
+            " (SELECT COUNT(*) FROM candidates x JOIN vacancies v ON v.id=x.vacancy_id WHERE v.company_id=c.id) AS post"
             " FROM companies c ORDER BY c.name", (scenario.OWNER_PATTERN,)).fetchall()
 
 

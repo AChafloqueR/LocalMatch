@@ -19,7 +19,13 @@
   <h2>Registrar una empresa</h2>
   <div class="row"><input class="grow" type="text" name="name" required placeholder="Nombre de la empresa"><button class="btn">Crear empresa</button></div>
   {% if companies %}<table style="margin-top:14px"><tr><th>Empresa</th><th>Reclutamiento</th><th>Jefes de área</th><th>Convocatorias</th><th></th></tr>
-  {% for c in companies %}<tr><td>{{ c.name }} <span class="hint">(id {{ c.id }})</span></td><td>{{ c.rec }}</td><td>{{ c.jef }}</td><td>{{ c.vac }}</td><td><button class="btn ghost small" formaction="/admin/companies/{{ c.id }}/demo" formmethod="post" formnovalidate>Cargar convocatorias de ejemplo</button></td></tr>{% endfor %}</table>{% endif %}
+  {% for c in companies %}<tr><td><a href="/admin/companies/{{ c.id }}"><b>{{ c.name }}</b></a> <span class="hint">(id {{ c.id }})</span></td><td>{{ c.rec }}</td><td>{{ c.jef }}</td><td>{{ c.vac }}</td><td><button class="btn ghost small" formaction="/admin/companies/{{ c.id }}/demo" formmethod="post" formnovalidate>Cargar convocatorias de ejemplo</button></td></tr>{% endfor %}</table>{% endif %}
+</form>
+
+<form class="card" method="post" action="/admin/demo-empresas">
+  <h2>Cargar empresas de ejemplo</h2>
+  <p class="hint">Registra NTT DATA, FISAC, TRC, Estudio Jurídico Muñoz, Backus y BRAMOTORS, cada una con una cuenta de reclutamiento, una de jefe de área y sus convocatorias publicadas. Descarga un CSV con los correos y las contraseñas (se muestran una sola vez). Son datos de demostración.</p>
+  <button class="btn">Cargar empresas de ejemplo y descargar CSV</button>
 </form>
 
 <form class="card" method="post" action="/admin/scenario">

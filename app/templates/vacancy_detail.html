@@ -3,7 +3,7 @@
 <span class="badge">{{ v.area }}</span> {% if v.status == 'cerrada' %}<span class="badge bad">Cerrada</span>{% else %}<span class="badge ok">Abierta</span>{% endif %}
 {% if v.published %}<span class="badge">Publicada en el portal</span>{% endif %}
 <h1 style="margin-top:8px">{{ v.title }}</h1>
-<p class="sub">Jefe de área: {{ boss.name if boss else '—' }} · mínimo {{ '%g'|format(v.min_years) }} año(s) · top de {{ v.top_n }}{% if v.closing_date %} · cierra el {{ v.closing_date }}{% endif %}</p>
+<p class="sub">Jefe de área: {{ boss.name if boss else '—' }}{% if boss %} ({{ boss.email }}){% endif %} · mínimo {{ '%g'|format(v.min_years) }} año(s) · top de {{ v.top_n }}{% if v.closing_date %} · cierra el {{ v.closing_date }}{% endif %}</p>
 
 <div class="row" style="margin-bottom:12px">
   <a class="btn ghost small" href="/vacancies/{{ v.id }}/edit">Editar convocatoria</a>

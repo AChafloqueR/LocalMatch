@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block title %}{{ c.name }}{% endblock %}
+{% block content %}
+<a href="/admin/users" class="hint">← Volver a las empresas</a>
+<h1 style="margin-top:8px">{{ c.name }}</h1>
+<p class="sub">Cuentas y convocatorias de la empresa.</p>
+<div class="card">
+  <h2>Cuentas</h2>
+  <table><tr><th>Nombre</th><th>Correo</th><th>Perfil</th></tr>
+  {% for u in users %}<tr><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ 'Reclutamiento' if u.role == 'reclutador' else 'Jefe de Área' }}</td></tr>
+  {% else %}<tr><td colspan="3" class="empty">Aún no hay cuentas.</td></tr>{% endfor %}</table>
+  <form method="post" action="/admin/users/one" class="row" style="margin-top:14px">
+    <input type="hidden" name="company_id" value="{{ c.id }}">
+    <input class="grow" type="text" name="name" required placeholder="Nombre">
+    <input class="grow" type="email" name="email" required placeholder="Correo">
+    <select name="role" style="width:auto"><option value="reclutador">Reclutamiento</option><option value="jefe">Jefe de Área</option></select>
+    <button class="btn small">Crear cuenta</button></form>
+</div>
+<div class="card">
+  <div class="row"><h2 class="grow" style="margin:0">Convocatorias</h2>
+    <form method="post" action="/admin/companies/{{ c.id }}/demo"><button class="btn ghost small">Cargar convocatorias de ejemplo</button></form></div>
+  <table><tr><th>Puesto</th><th>Estado</th><th>CV</th><th>Enviados</th><th>Cierre</th></tr>
+  {% for v in vacs %}<tr><td>{{ v.title }}</td><td>{{ 'Cerrada' if v.status == 'cerrada' else ('Publicada' if v.published else 'Sin publicar') }}</td><td>{{ v.n }}</td><td>{{ v.short }}</td><td>{{ v.closing_date or '—' }}</td></tr>
+  {% else %}<tr><td colspan="5" class="empty">Aún no hay convocatorias.</td></tr>{% endfor %}</table>
+</div>
+{% endblock %}

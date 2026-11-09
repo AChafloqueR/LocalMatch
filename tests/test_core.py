@@ -443,3 +443,57 @@ def test_ranking_csv_incluye_contacto(client):
     make_user("p@t.l", "Ana Perez"); login(c, "p@t.l"); apply(c, vid); c.post("/logout"); login(c, "r@t.l")
     r = c.get(f"/vacancies/{vid}/ranking.csv")
     assert r.status_code == 200 and r.text.startswith("posicion,candidato") and "Ana Perez" in r.text and "p@t.l" in r.text and "987654321" in r.text
+
+
+def test_el_jefe_ve_los_candidatos_en_su_inicio(client):
+    c = client; login(c, "r@t.l"); vid = new_vac(c); c.post("/logout")
+    make_user("p@t.l", "Ana Perez Soto"); login(c, "p@t.l"); apply(c, vid); c.post("/logout")
+    cid = cand_rows()[0]["id"]
+    login(c, "j@t.l")
+    assert "Ana Perez Soto" not in c.get("/dashboard").text                     # aún no se lo enviaron
+    assert "Aún no tienes candidatos" in c.get("/dashboard").text
+    c.post("/logout"); login(c, "r@t.l")
+    assert "Julio Jefe (j@t.l)" in c.get(f"/vacancies/{vid}").text              # la convocatoria muestra a qué jefe va
+    msg = flash_after(c, c.post(f"/candidates/{cid}/shortlist", follow_redirects=False))
+    assert "Candidato enviado a Julio Jefe (j@t.l)" in msg
+    c.post("/logout"); login(c, "j@t.l")
+    dash = c.get("/dashboard").text
+    assert "Hola, Julio Jefe" in dash and "Jefe de Área" in dash and "Empresa Test" in dash
+    assert "Ana Perez Soto" in dash and "Descargar CV" in dash and "Guardar decisión" in dash
+    assert dash.index("Hola, Julio Jefe") < dash.index("Jefe de Área") < dash.index("Ana Perez Soto")
+    make_user("j2@t.l", "Otro Jefe", "jefe", 1); c.post("/logout"); login(c, "j2@t.l")
+    assert "Ana Perez Soto" not in c.get("/dashboard").text                       # solo ve lo que le asignaron a él
+    c.post("/logout"); login(c, "j@t.l")
+    assert "Decisión registrada" in flash_after(c, c.post(f"/candidates/{cid}/decision", data={"decision": "En espera"}, follow_redirects=False))
+
+
+def test_empresas_de_ejemplo_y_vista_del_administrador(client):
+    import csv as _csv
+    c = client; login(c, "a@t.l")
+    r = c.post("/admin/demo-empresas")
+    assert r.status_code == 200 and "attachment" in r.headers["content-disposition"]
+    rows = list(_csv.DictReader(io.StringIO(r.text)))
+    assert len(rows) == 12 and {x["empresa"] for x in rows} == {"NTT DATA", "FISAC", "TRC", "Estudio Jurídico Muñoz", "Backus", "BRAMOTORS"}
+    assert len(_csv.reader(io.StringIO(c.post("/admin/demo-empresas").text)).__next__()) == 4 and c.post("/admin/demo-empresas").text.count("\n") == 1   # no repite cuentas
+    dash = c.get("/dashboard").text
+    assert "Hola, Admin" in dash and "Administrador de LocalMatch" in dash and "NTT DATA" in dash and "Backus" in dash and "Ver empresa" in dash
+    from app.db import get_db
+    with get_db() as db:
+        ntt = db.execute("SELECT id FROM companies WHERE name='NTT DATA'").fetchone()["id"]
+        mun = db.execute("SELECT id FROM companies WHERE name='Estudio Jurídico Muñoz'").fetchone()["id"]
+    det = c.get(f"/admin/companies/{ntt}").text
+    assert "Reclutadora NTT DATA" in det and "Jefe NTT DATA" in det and "Ingeniero/a de Sistemas" in det and "Analista de datos" in det and "Practicante de Derecho" not in det
+    assert "Practicante de Derecho" in c.get(f"/admin/companies/{mun}").text
+    portal = c.post("/logout") and c.get("/empleos").text
+    assert "Ingeniero/a Mecánico" in portal and "Practicante de Derecho" in portal and "BRAMOTORS" in portal
+    cred = {(x["empresa"], x["rol"]): x for x in rows}
+    rec, jefe = cred[("NTT DATA", "reclutador")], cred[("NTT DATA", "jefe")]
+    with get_db() as db:
+        vid = db.execute("SELECT id FROM vacancies WHERE company_id=? AND title='Analista de datos'", (ntt,)).fetchone()["id"]
+    make_user("p@t.l", "Ana Perez Soto"); login(c, "p@t.l"); apply(c, vid, ans_1="Sí"); c.post("/logout")
+    assert c.post("/login", data={"email": rec["correo"], "password": rec["contrasena"]}, follow_redirects=False).status_code == 303
+    assert "Hola, Reclutadora NTT DATA" in c.get("/dashboard").text
+    c.post(f"/vacancies/{vid}/send-top"); c.post("/logout")
+    assert c.post("/login", data={"email": jefe["correo"], "password": jefe["contrasena"]}, follow_redirects=False).status_code == 303
+    page = c.get("/dashboard").text
+    assert "Hola, Jefe NTT DATA" in page and "Ana Perez Soto" in page and "Analista de datos" in page
