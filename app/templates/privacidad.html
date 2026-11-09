@@ -1,0 +1,97 @@
+{% extends "base.html" %}{% block title %}Política de privacidad · LocalMatch{% endblock %}
+{% block content %}
+<div class="center card" style="max-width:800px;">
+  <h1>Política de privacidad</h1>
+  <p class="sub">Última actualización: noviembre 2024</p>
+
+  <details open>
+    <summary><strong>1. Responsable del tratamiento</strong></summary>
+    <p>LocalMatch (curso Negocios Centrados en la IA, UPAO, Trujillo 2026). Contacto: <a href="mailto:privacidad@localmatch.local">privacidad@localmatch.local</a></p>
+  </details>
+
+  <details open>
+    <summary><strong>2. Datos que recopilamos</strong></summary>
+    <ul>
+      <li><strong>Cuenta:</strong> nombre, correo electrónico, contraseña (hasheada con bcrypt).</li>
+      <li><strong>CV original:</strong> el archivo que subes (PDF, DOCX, TXT) con tus datos personales (nombre, correo, teléfono, dirección, enlaces, DNI, etc.). Se guarda de forma segura para que el reclutador y el jefe de área puedan contactarte.</li>
+      <li><strong>CV anonimizado:</strong> versión procesada sin datos personales (nombre, correo, teléfono, dirección, enlaces, DNI, fecha de nacimiento). Es la que se usa para scoring y se envía al LLM.</li>
+      <li><strong>Perfil extraído:</strong> competencias, años de experiencia, formación, idiomas — todo derivado del texto anonimizado.</li>
+      <li><strong>Puntaje y evaluación:</strong> resultado del algoritmo determinista y explicación generada por LLM (sobre texto anonimizado).</li>
+      <li><strong>Metadatos:</strong> fecha de postulación, vacante, estado del proceso.</li>
+    </ul>
+  </details
+
+  <details open>
+    <summary><strong>3. Finalidad y base legal</strong></summary>
+    <ul>
+      <li>Gestionar tu cuenta y autenticación (ejecución de contrato).</li>
+      <li>Procesar tu postulación y evaluar tu idoneidad para la vacante (interés legítimo / consentimiento).</li>
+      <li>Permitir a reclutadores y jefes de área tomar decisiones de selección (interés legítimo de la empresa).</li>
+      <li>Mejorar el algoritmo de evaluación con datos agregados y anonimizados (interés legítimo).</li>
+    </ul>
+  </details>
+
+  <details open>
+    <summary><strong>4. Anonimización y LLM</strong></summary>
+    <p>Tu CV original se guarda intacto. Al ejecutar la evaluación automática, se crea una versión anonimizada que elimina datos personales (nombre, correo, teléfono, dirección, enlaces, DNI, fecha de nacimiento). <strong>Solo esta versión anonimizada se envía al modelo de lenguaje (LLM)</strong> para extracción de perfil y explicación del puntaje. El LLM nunca recibe tu identidad ni datos de contacto.</p>
+  </details
+
+  <details open>
+    <summary><strong>5. Destinatarios</strong></summary>
+    <ul>
+      <li><strong>Reclutadores:</strong> ven tu <strong>CV original</strong> (con nombre y contacto para poder llamarte), perfil, puntaje y explicación.</li>
+      <li><strong>Jefes de área:</strong> ven candidatos preseleccionados con <strong>CV original</strong> (para poder contactarte), perfil, puntaje. Deciden: Entrevistar / En espera / Descartar.</li>
+      <li><strong>Administradores:</strong> gestión de cuentas y métricas agregadas.</li>
+      <li><strong>Proveedores de LLM:</strong> reciben solo el texto anonimizado para extracción de perfil y explicación. No almacenan datos personales.</li>
+    </ul>
+  </details
+
+  <details open>
+    <summary><strong>6. Conservación</strong></summary>
+    <ul>
+      <li>Cuenta: mientras esté activa o hasta que solicites eliminación.</li>
+      <li>CV anonimizado y perfil: 2 años desde la postulación o hasta que solicites supresión.</li>
+      <li>Puntajes y decisiones: 2 años para auditoría de procesos de selección.</li>
+    </ul>
+  </details>
+
+  <details open>
+    <summary><strong>7. Tus derechos</strong></summary>
+    <p>Puedes ejercer en cualquier momento:</p>
+    <ul>
+      <li><strong>Acceso:</strong> saber qué datos tuyos tratamos.</li>
+      <li><strong>Rectificación:</strong> corregir datos inexactos.</li>
+      <li><strong>Supresión:</strong> eliminar tu cuenta y datos asociados (escribe a <a href="mailto:privacidad@localmatch.local">privacidad@localmatch.local</a>).</li>
+      <li><strong>Oposición / limitación:</strong> oponerte al tratamiento con fines de mejora del algoritmo.</li>
+      <li><strong>Portabilidad:</strong> recibir tus datos en formato estructurado.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary><strong>8. Seguridad</strong></summary>
+    <ul>
+      <li>Contraseñas hasheadas con bcrypt (nunca en claro).</li>
+      <li>Sesiones con cookies HttpOnly, SameSite=Lax, Secure en producción.</li>
+      <li>Base de datos SQLite local (o PostgreSQL en producción) con acceso por rol.</li>
+      <li>CV original guardado de forma segura (acceso para reclutador y jefe de área de la vacante). Anonimización automática antes de enviar a LLM — los datos personales nunca salen hacia la IA.</li>
+    </ul>
+  </details
+
+  <details>
+    <summary><strong>9. Transferencias internacionales</strong></summary>
+    <p>Si el LLM se ejecuta en la nube (p. ej. OpenAI, Anthropic), el texto anonimizado puede salir del EEE. No se envían datos personales. Si usas un modelo local (Ollama), no hay transferencia.</p>
+  </details>
+
+  <details>
+    <summary><strong>10. Cambios en esta política</strong></summary>
+    <p>Actualizaremos esta página con la fecha de última modificación. Cambios sustanciales se notificarán por correo.</p>
+  </details>
+
+  <details>
+    <summary><strong>11. Contacto</strong></summary>
+    <p>Delegado de protección de datos: <a href="mailto:privacidad@localmatch.local">privacidad@localmatch.local</a></p>
+  </details>
+
+  <p style="margin-top:24px;"><a href="/registro" class="btn">Volver al registro</a></p>
+</div>
+{% endblock %}

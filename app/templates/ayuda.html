@@ -1,0 +1,62 @@
+{% extends "base.html" %}{% block title %}Manual de uso · LocalMatch{% endblock %}
+{% block content %}
+<h1>Manual de uso</h1>
+<p class="sub">Guía breve para usar LocalMatch según tu perfil. El agente propone un ranking; las decisiones siempre las toman las personas.</p>
+
+<div class="card">
+  <h2>¿Cómo funciona?</h2>
+  <ol>
+    <li>Reclutamiento crea una vacante y carga los CV de los postulantes (o el postulante crea su propia cuenta y sube su CV a la vacante).</li>
+    <li>El agente anonimiza cada CV, calcula un puntaje de 0 a 100 con reglas deterministas y redacta una explicación.</li>
+    <li>Reclutamiento revisa el ranking y preselecciona; el jefe de área decide a quién entrevistar.</li>
+  </ol>
+  <p class="hint">El puntaje no lo decide la inteligencia artificial: se calcula con reglas fijas y siempre puedes ver su desglose y explicación.</p>
+</div>
+
+<div class="card">
+  <h2><span class="badge">Reclutamiento</span></h2>
+  <ol>
+    <li><b>Crear una vacante:</b> entra a <i>Nueva vacante</i>, completa título, área y descripción. Escribe los requisitos excluyentes y los deseables separados por comas, indica los años mínimos de experiencia y asigna el jefe de área que evaluará a los candidatos.</li>
+    <li><b>Cargar los CV:</b> abre la vacante y sube los archivos (PDF, DOCX o TXT; hasta 40 archivos de 5 MB como máximo cada uno). Los CV que no se puedan leer se descartan y verás un aviso con la cantidad.</li>
+    <li><b>Ejecutar el agente:</b> pulsa el botón de evaluación. El agente analiza todos los CV de la vacante y guarda el puntaje y la explicación de cada candidato.</li>
+    <li><b>Revisar el ranking:</b> los candidatos aparecen ordenados por puntaje. Abre el desglose para ver qué requisitos cumple y cuáles no, y lee la explicación.</li>
+    <li><b>Preseleccionar:</b> marca a los candidatos que quieres enviar al jefe de área y, si quieres, agrega una nota con tu apreciación (máximo 500 caracteres).</li>
+    <li><b>Corregir si hace falta:</b> puedes quitar un candidato de la lista, eliminar un CV, borrar todos los CV de la vacante o volver a ejecutar la evaluación.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2><span class="badge">Jefe de área</span></h2>
+  <ol>
+    <li>En <i>Inicio</i> verás únicamente las vacantes que te asignaron, con la cantidad de candidatos enviados por reclutamiento.</li>
+    <li>Abre la lista para revisar a los preseleccionados, ordenados por puntaje y con su explicación. Por privacidad, no verás nombres, datos de contacto ni el nombre del archivo: cada candidato se identifica con un número.</li>
+    <li>Registra tu decisión en cada candidato: <b>Entrevistar</b>, <b>En espera</b> o <b>Descartar</b>, con un comentario opcional. Puedes cambiar la decisión cuando lo necesites.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2><span class="badge">Postulante</span></h2>
+  <ol>
+    <li><b>Crea tu cuenta:</b> desde la pantalla de ingreso entra a <i>Créala aquí</i> y regístrate con tu nombre, correo y una contraseña.</li>
+    <li><b>Postúlate:</b> en tu inicio verás las vacantes abiertas; abre la que te interese y sube tu CV en PDF, DOCX o TXT. Solo puedes postularte una vez por vacante y tu CV se anonimiza antes de ser revisado.</li>
+    <li><b>Sigue tu postulación:</b> en <i>Mis postulaciones</i> verás el estado de cada una: recibida, evaluada, preseleccionada y la decisión del jefe de área.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2><span class="badge">Investigación</span></h2>
+  <ol>
+    <li>En <i>Participantes</i> crea cuentas una por una o en lote. Al crearlas se generan contraseñas temporales: descarga el CSV con las credenciales y entrégalo a cada participante, porque no se vuelven a mostrar.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2>Privacidad y buenas prácticas</h2>
+  <ul>
+    <li>Los CV se anonimizan antes de guardarse y antes de enviarse a cualquier modelo de lenguaje.</li>
+    <li>Cada perfil solo accede a sus propias vacantes; no compartas tu cuenta.</li>
+    <li>El agente apoya la preselección, pero no descarta personas por sí solo: la decisión final es siempre humana.</li>
+    <li>Cuando termines la investigación, elimina los CV que ya no necesites.</li>
+  </ul>
+</div>
+{% endblock %}

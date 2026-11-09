@@ -1,0 +1,80 @@
+{% extends "base.html" %}{% block title %}Términos y condiciones · LocalMatch{% endblock %}
+{% block content %}
+<div class="center card" style="max-width:800px;">
+  <h1>Términos y condiciones</h1>
+  <p class="sub">Última actualización: noviembre 2024</p>
+
+  <details open>
+    <summary><strong>1. Qué es LocalMatch</strong></summary>
+    <p>LocalMatch es una plataforma de preselección de candidatos. Las empresas publican vacantes y los postulantes se registran y suben su CV. El sistema evalúa automáticamente el perfil frente a los requisitos de la vacante y genera un puntaje. Los reclutadores y jefes de área revisan los candidatos mejor puntuados y deciden a quién entrevistar.</p>
+  </details>
+
+  <details open>
+    <summary><strong>2. Tu CV y anonimización</strong></summary>
+    <p>Tu CV original (con nombre y datos de contacto) se guarda de forma segura para que el reclutador y el jefe de área puedan contactarte si eres seleccionado. <strong>Solo se anonimiza al enviar el texto al modelo de lenguaje (LLM)</strong> para la evaluación automática: se eliminan nombre, correo, teléfono, dirección, enlaces y cualquier dato de contacto antes de enviarlo a la IA.</p>
+    <p>El <strong>reclutador ve tu CV original</strong> (para poder llamarte). El <strong>jefe de área también ve tu CV original</strong> de los candidatos preseleccionados (para poder contactarte). Solo el modelo de lenguaje (IA) recibe la versión anonimizada.</p>
+  </details
+
+  <details open>
+    <summary><strong>3. Uso de inteligencia artificial</strong></summary>
+    <p><strong>El reclutador puede usar IA para analizar CVs.</strong> Para la evaluación automática, se crea una versión anonimizada de tu CV (sin nombre, correo, teléfono, dirección, enlaces) y solo esa versión se envía al modelo de lenguaje (LLM) para extraer competencias, experiencia y generar una explicación del puntaje. El modelo nunca recibe tu identidad ni datos de contacto.</p>
+  </details
+
+  <details open>
+    <summary><strong>4. Flujo de tu postulación</strong></summary>
+    <ol>
+      <li>Te postulas a una vacante subiendo tu CV (PDF, DOCX o TXT, máx. 5 MB, 1 archivo).</li>
+      <li>El sistema guarda tu CV original y crea una versión anonimizada para la evaluación.</li>
+      <li>El agente evalúa la versión anonimizada (puntaje automático + extracción de perfil vía LLM).</li>
+      <li>Reclutamiento revisa los candidatos <strong>con su CV original</strong> y puede marcarte como <strong>preseleccionado</strong>.</li>
+      <li>Si eres preseleccionado, el jefe de área ve <strong>tu CV original</strong> (para poder contactarte) y decide: <strong>Entrevistar</strong>, <strong>En espera</strong> o <strong>Descartar</strong>.</li>
+      <li>Ves el estado en tiempo real en tu dashboard.</li>
+    </ol>
+  </details
+
+  <details open>
+    <summary><strong>5. Tus datos</strong></summary>
+    <ul>
+      <li>Tu nombre, correo y contraseña (hasheada) se guardan para tu cuenta.</li>
+      <li>Tu CV original y tu CV anonimizado se guardan ligados a la vacante.</li>
+      <li>Tu perfil extraído (de la versión anonimizada) y el puntaje se guardan.</li>
+      <li>Puedes solicitar la eliminación de tu cuenta y datos en cualquier momento.</li>
+    </ul>
+  </details
+
+  <details open>
+    <summary><strong>6. Responsabilidades del postulante</strong></summary>
+    <ul>
+      <li>La información de tu CV debe ser veraz y actualizada.</li>
+      <li>No subir documentos de terceros ni información sensible (DNI, pasaporte, salud, etc.).</li>
+      <li>El puntaje automático es una ayuda, no una decisión final; la decisión la toma una persona.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary><strong>7. Responsabilidades de la empresa</strong></summary>
+    <ul>
+      <li>La empresa es responsable de la veracidad de la vacante publicada.</li>
+      <li>La decisión final de entrevista siempre la toma una persona (jefe de área).</li>
+      <li>Los datos de los postulantes se tratan con confidencialidad y solo para el proceso de selección.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary><strong>8. Limitación de responsabilidad</strong></summary>
+    <p>LocalMatch es una herramienta de apoyo a la decisión. No garantiza la contratación ni la idoneidad de ningún candidato. El puntaje es indicativo y puede contener errores.</p>
+  </details>
+
+  <details>
+    <summary><strong>9. Cambios en los términos</strong></summary>
+    <p>Podemos actualizar estos términos. La versión vigente siempre estará en esta página. El uso continuado implica aceptación.</p>
+  </details>
+
+  <details>
+    <summary><strong>10. Contacto</strong></summary>
+    <p>Para dudas sobre estos términos: <a href="mailto:soporte@localmatch.local">soporte@localmatch.local</a></p>
+  </details>
+
+  <p style="margin-top:24px;"><a href="/registro" class="btn">Volver al registro</a></p>
+</div>
+{% endblock %}
