@@ -63,3 +63,5 @@ th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;le
 .reqs input,.reqs select{padding:6px 8px;font-size:13px}
 .cmp td,.cmp th{vertical-align:top;font-size:13px}
 .flag{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:8px;font-size:12px;font-weight:600;background:var(--bad-soft);color:var(--bad)}
+
+.links a{white-space:nowrap}

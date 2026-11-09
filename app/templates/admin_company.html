@@ -3,11 +3,28 @@
 <a href="/admin/users" class="hint">← Volver a las empresas</a>
 <h1 style="margin-top:8px">{{ c.name }}</h1>
 <p class="sub">Cuentas y convocatorias de la empresa.</p>
+{% if created %}
+<div class="card" style="background:var(--ok-soft);border-color:transparent">
+  <b>Nueva contraseña generada.</b> Cópiala ahora, no se vuelve a mostrar:<br>
+  Correo: <code>{{ created[0] }}</code> · Contraseña: <code>{{ created[1] }}</code>
+</div>{% endif %}
 <div class="card">
-  <h2>Cuentas</h2>
-  <table><tr><th>Nombre</th><th>Correo</th><th>Perfil</th></tr>
-  {% for u in users %}<tr><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ 'Reclutamiento' if u.role == 'reclutador' else 'Jefe de Área' }}</td></tr>
-  {% else %}<tr><td colspan="3" class="empty">Aún no hay cuentas.</td></tr>{% endfor %}</table>
+  <div class="row"><h2 class="grow" style="margin:0">Cuentas</h2>
+    {% if n_part %}<form method="post" action="/admin/companies/{{ c.id }}/clean-participants" onsubmit="return confirm('¿Eliminar las {{ n_part }} cuentas de participantes (rec01…, jef01…)? Sus convocatorias pasan a las cuentas que se conservan. No se elimina a quien ya respondió el SUS.')"><button class="btn danger small">Eliminar las {{ n_part }} cuentas de participantes</button></form>{% endif %}</div>
+  <p class="hint">Las contraseñas no se pueden ver (se guardan cifradas). Si no la recuerdas, restablécela y se genera una nueva.</p>
+  <table><tr><th>Nombre</th><th>Correo</th><th>Perfil</th><th></th></tr>
+  {% for u in users %}
+  <tr><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ 'Reclutamiento' if u.role == 'reclutador' else 'Jefe de Área' }}{% if is_part(u.email) %} <span class="hint">(participante)</span>{% endif %}</td>
+    <td style="white-space:nowrap">
+      <details style="display:inline-block;vertical-align:top"><summary class="btn ghost small" style="display:inline-block">Editar</summary>
+        <form method="post" action="/admin/users/{{ u.id }}/edit" style="margin-top:6px;min-width:260px">
+          <input type="text" name="name" value="{{ u.name }}" required maxlength="80" placeholder="Nombre">
+          <input type="email" name="email" value="{{ u.email }}" required maxlength="120" placeholder="Correo" style="margin-top:6px">
+          <button class="btn small" style="margin-top:6px">Guardar</button></form></details>
+      <form method="post" action="/admin/users/{{ u.id }}/reset-password" style="display:inline" onsubmit="return confirm('¿Generar una contraseña nueva para {{ u.email }}?')"><button class="btn ghost small">Restablecer contraseña</button></form>
+      <form method="post" action="/admin/users/{{ u.id }}/delete" style="display:inline" onsubmit="return confirm('¿Eliminar la cuenta {{ u.email }}?')"><button class="btn danger small">Eliminar</button></form>
+    </td></tr>
+  {% else %}<tr><td colspan="4" class="empty">Aún no hay cuentas.</td></tr>{% endfor %}</table>
   <form method="post" action="/admin/users/one" class="row" style="margin-top:14px">
     <input type="hidden" name="company_id" value="{{ c.id }}">
     <input class="grow" type="text" name="name" required placeholder="Nombre">

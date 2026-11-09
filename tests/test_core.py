@@ -62,8 +62,8 @@ def new_vac(c, boss_id=2, published=True, title="Analista de datos", **extra):
     return int(r.headers["location"].split("/")[-1])
 
 
-def apply(c, vid, content=STRONG, fname="cv.txt", phone="987654321", district="Trujillo", **over):
-    data = {"phone": phone, "district": district, "exp_role": "Analista", "exp_company": "Comercial Norte", "exp_time": "2 años",
+def apply(c, vid, content=STRONG, fname="cv.txt", phone="987654321", dept="La Libertad", prov="Trujillo", district="Trujillo", **over):
+    data = {"phone": phone, "dept": dept, "prov": prov, "district": district, "exp_role": "Analista", "exp_company": "Comercial Norte", "exp_time": "2 años",
             "exp_desc": "Elaboraba reportes semanales de ventas y tableros.", "adult": "1", "consent": "1"}
     data.update(over)
     data = {k: v for k, v in data.items() if v is not None}
@@ -241,7 +241,7 @@ def test_validaciones_del_formulario(client):
     assert apply(c, vid).headers["location"] == "/login"                    # sin cuenta no puede postular
     make_user("p@t.l"); login(c, "p@t.l")
     casos = [({"phone": "87654321"}, "9 dígitos"), ({"phone": "98765432a"}, "9 dígitos"), ({"adult": None}, "mayor de 18"), ({"consent": None}, "aceptar"),
-             ({"district": ""}, "distrito"), ({"district": "Otro", "district_other": ""}, "distrito"), ({"exp_desc": "corto"}, "última experiencia"), ({}, "Responde todas")]
+             ({"district": ""}, "distrito"), ({"dept": "Lima"}, "distrito"), ({"district": "Chiclayo"}, "distrito"), ({"exp_desc": "corto"}, "última experiencia"), ({}, "Responde todas")]
     for over, msg in casos:
         over = dict(over)
         if msg != "Responde todas":
@@ -497,3 +497,71 @@ def test_empresas_de_ejemplo_y_vista_del_administrador(client):
     assert c.post("/login", data={"email": jefe["correo"], "password": jefe["contrasena"]}, follow_redirects=False).status_code == 303
     page = c.get("/dashboard").text
     assert "Hola, Jefe NTT DATA" in page and "Ana Perez Soto" in page and "Analista de datos" in page
+
+
+def test_ubicacion_completa_departamento_provincia_distrito(client):
+    from app import geo
+    assert len(geo.DATA) == 25 and sum(len(d["p"]) for d in geo.DATA) == 196 and sum(len(p["d"]) for d in geo.DATA for p in d["p"]) == 1892
+    assert geo.valid("La Libertad", "Trujillo", "Víctor Larco Herrera") and geo.valid("Lima", "Lima", "Miraflores") and geo.valid("Junín", "Huancayo", "Huancayo")
+    assert not geo.valid("Lima", "Trujillo", "Trujillo") and not geo.valid("La Libertad", "Trujillo", "Miraflores")
+    assert client.get("/static/ubigeo.json").status_code == 200 and "La Libertad" in client.get("/static/ubigeo.json").text
+    c = client; login(c, "r@t.l"); vid = new_vac(c); c.post("/logout")
+    make_user("p@t.l"); login(c, "p@t.l")
+    html = c.get(f"/empleos/{vid}").text
+    assert 'name="dept"' in html and 'name="prov"' in html and 'name="district"' in html and "ubigeo.json" in html
+    assert apply(c, vid, district="Víctor Larco Herrera").headers["location"].endswith("/exito")
+    assert cand_rows()[0]["applicant_district"] == "Víctor Larco Herrera, Trujillo, La Libertad"
+
+
+def test_admin_edita_restablece_y_elimina_cuentas(client):
+    c = client; login(c, "a@t.l")
+    page = c.get("/admin/companies/1").text
+    assert "Restablecer contraseña" in page and "r@t.l" in page and "Editar" in page
+    uid = make_user("x@t.l", "Ana Uno", "reclutador", 1)
+    assert "Cuenta actualizada" in c.post(f"/admin/users/{uid}/edit", data={"name": "Ana Dos", "email": "ana2@t.l"}, follow_redirects=True).text
+    assert "Ya existe otra cuenta" in c.post(f"/admin/users/{uid}/edit", data={"name": "Ana", "email": "r@t.l"}, follow_redirects=True).text
+    assert "Revisa el nombre" in c.post(f"/admin/users/{uid}/edit", data={"name": "Ana", "email": "no-es-correo"}, follow_redirects=True).text
+    r = c.post(f"/admin/users/{uid}/reset-password")
+    assert "Nueva contraseña generada" in r.text and "ana2@t.l" in r.text
+    import re as _re
+    pw = _re.search(r"Contraseña: <code>([^<]+)</code>", r.text).group(1)
+    c.post("/logout")
+    assert c.post("/login", data={"email": "ana2@t.l", "password": pw}, follow_redirects=False).status_code == 303
+    assert c.post("/login", data={"email": "ana2@t.l", "password": PW}, follow_redirects=False).status_code == 200      # la anterior ya no sirve
+    login(c, "a@t.l")
+    assert "Cuenta eliminada" in c.post(f"/admin/users/{uid}/delete", follow_redirects=True).text
+    assert c.post(f"/admin/users/{uid}/delete").status_code == 404
+
+
+def test_limpiar_cuentas_de_participantes(client):
+    c = client; login(c, "a@t.l")
+    c.post("/admin/users/bulk", data={"role": "jefe", "count": 4, "company_id": 1}); c.post("/admin/users/bulk", data={"role": "reclutador", "count": 3, "company_id": 1})
+    from app.db import get_db
+    with get_db() as db:
+        jef01 = db.execute("SELECT id FROM users WHERE email='jef01-e1@localmatch.local'").fetchone()["id"]
+        rec01 = db.execute("SELECT id FROM users WHERE email='rec01-e1@localmatch.local'").fetchone()["id"]
+        jef02 = db.execute("SELECT id FROM users WHERE email='jef02-e1@localmatch.local'").fetchone()["id"]
+        db.execute("INSERT INTO sus_responses(user_id,profile,answers,score) VALUES(?,?,?,?)", (jef02, "jefe", "[4,2,4,2,4,2,4,2,4,2]", 75))
+    c.post("/logout"); login(c, "r@t.l"); vid = new_vac(c, boss_id=jef01); c.post("/logout")        # convocatoria asignada a un participante
+    login(c, "a@t.l")
+    assert "7 cuenta(s)" in c.get("/admin/companies/1").text or "Eliminar las 7" in c.get("/admin/companies/1").text
+    msg = c.post("/admin/companies/1/clean-participants", follow_redirects=True).text
+    assert "Se eliminaron 6 cuenta(s)" in msg and "jef02-e1@localmatch.local" in msg and "respondió el SUS" in msg    # conserva al que contestó el SUS
+    with get_db() as db:
+        emails = {r["email"] for r in db.execute("SELECT email FROM users").fetchall()}
+        boss = db.execute("SELECT boss_id FROM vacancies WHERE id=?", (vid,)).fetchone()["boss_id"]
+        j_id = db.execute("SELECT id FROM users WHERE email='j@t.l'").fetchone()["id"]
+    assert {"r@t.l", "j@t.l", "a@t.l", "jef02-e1@localmatch.local"} <= emails and "rec01-e1@localmatch.local" not in emails and "jef01-e1@localmatch.local" not in emails
+    assert boss == j_id                                                                      # la convocatoria pasó al jefe que se conserva
+
+
+def test_el_jefe_ve_la_opcion_alterna_y_el_motivo(client):
+    c = client; login(c, "r@t.l"); vid = new_vac(c); c.post("/logout")
+    make_user("p@t.l", "Carlos Medina"); login(c, "p@t.l"); apply(c, vid, content=WEAK); c.post("/logout")
+    cid = cand_rows()[0]["id"]
+    login(c, "r@t.l")
+    assert "Enviar los 0 mejores al jefe" in c.get(f"/vacancies/{vid}").text        # no cumple los excluyentes: el top queda vacío
+    c.post(f"/candidates/{cid}/shortlist")                                           # pero la reclutadora puede enviarlo igual
+    c.post("/logout"); login(c, "j@t.l")
+    dash = c.get("/dashboard").text
+    assert "Carlos Medina" in dash and "Opción alterna" in dash and "no cumple" in dash

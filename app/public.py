@@ -7,7 +7,7 @@ import secrets
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from . import catalog, ranking, reqs
+from . import catalog, geo, ranking, reqs
 from .auth import current_user, hash_password
 from .db import audit, get_db
 from .parsing import extract_text
@@ -123,7 +123,7 @@ def empleo(request: Request, vid: int):
         applied = db.execute("SELECT id FROM candidates WHERE vacancy_id=? AND user_id=?", (vid, u["id"])).fetchone() if u else None
     d = vacancy_dict(v)
     return page(request, "empleo_detalle.html", v=d, company=v["company"], items=d["items"], kinds=catalog.KINDS, questions=reqs.questions_from_row(v),
-                districts=catalog.DISTRICTS, other=catalog.OTHER, can_apply=bool(u), applied=applied, f={})
+                can_apply=bool(u), applied=applied, f={})
 
 
 @router.post("/empleos/{vid}/postular")
@@ -134,7 +134,7 @@ async def postular(request: Request, vid: int):
         return go(request, "/login", "Ingresa con tu cuenta de postulante (o crea una) para postular.")
     form = await request.form()
     g = lambda k, n=200: " ".join(str(form.get(k, "")).split())[:n]  # noqa: E731
-    phone, district, other = g("phone", 12), g("district", 40), g("district_other", 60)
+    phone, dept, prov, district = g("phone", 12), g("dept", 40), g("prov", 60), g("district", 80)
     exp_role, exp_company, exp_time, exp_desc = g("exp_role", 80), g("exp_company", 80), g("exp_time", 40), str(form.get("exp_desc", "")).strip()[:1200]
     with get_db() as db:
         v = _open_vacancy(db, vid)
@@ -151,8 +151,8 @@ async def postular(request: Request, vid: int):
         return go(request, back, "Debes aceptar el tratamiento de tus datos para postular.")
     if not reqs.valid_phone(phone):
         return go(request, back, "El celular debe tener exactamente 9 dígitos numéricos y empezar con 9.")
-    if district not in catalog.DISTRICTS + [catalog.OTHER] or (district == catalog.OTHER and len(other) < 3):
-        return go(request, back, "Elige tu distrito (o escribe cuál es si eliges «Otro»).")
+    if not geo.valid(dept, prov, district):
+        return go(request, back, "Elige tu departamento, tu provincia y tu distrito.")
     if len(exp_role) < 2 or len(exp_company) < 2 or not exp_time or len(exp_desc) < 20:
         return go(request, back, "Cuéntanos tu última experiencia: cargo, empresa, tiempo y una descripción de al menos 20 caracteres.")
     cv = form.get("cv")
@@ -167,7 +167,7 @@ async def postular(request: Request, vid: int):
     except Exception:
         return go(request, back, "No pudimos leer tu CV. Prueba con otro archivo (que no sea una imagen escaneada).")
     digest = hashlib.sha256(data).hexdigest()
-    place = other if district == catalog.OTHER else district
+    place = geo.label(dept, prov, district)
     experience = f"ÚLTIMA EXPERIENCIA\n{exp_role} en {exp_company} ({exp_time}). {exp_desc}"
     with get_db() as db:
         _open_vacancy(db, vid)

@@ -238,13 +238,109 @@ def demo_empresas(user=Depends(require("admin"))):
                     headers={"Content-Disposition": "attachment; filename=credenciales_empresas_ejemplo.csv", "Cache-Control": "no-store"})
 
 
-@router.get("/admin/companies/{company_id}")
-def company_detail(request: Request, company_id: int, user=Depends(require("admin"))):
+# ---------- administración de cuentas ----------
+import re  # noqa: E402
+
+PARTICIPANT_RE = re.compile(r"^(rec|jef)\d{2}(-e\d+)?@localmatch\.local$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _company_page(request, company_id: int, created=None):
     with get_db() as db:
         c = db.execute("SELECT * FROM companies WHERE id=?", (company_id,)).fetchone()
         if not c:
             raise HTTPException(404, "Empresa no encontrada.")
-        users = db.execute("SELECT id, name, email, role FROM users WHERE company_id=? AND email NOT LIKE ? ORDER BY role, name", (company_id, "escenario-e%@localmatch.local")).fetchall()
+        users = db.execute("SELECT id, name, email, role FROM users WHERE company_id=? AND email NOT LIKE ? ORDER BY role, id", (company_id, "escenario-e%@localmatch.local")).fetchall()
         vacs = db.execute("SELECT v.id, v.title, v.status, v.published, v.closing_date, (SELECT COUNT(*) FROM candidates x WHERE x.vacancy_id=v.id) AS n,"
                           " (SELECT COUNT(*) FROM candidates x WHERE x.vacancy_id=v.id AND x.shortlisted=1) AS short FROM vacancies v WHERE v.company_id=? ORDER BY v.id DESC", (company_id,)).fetchall()
-    return page(request, "admin_company.html", c=c, users=users, vacs=vacs)
+    n_part = sum(1 for u in users if PARTICIPANT_RE.match(u["email"]))
+    return page(request, "admin_company.html", c=c, users=users, vacs=vacs, created=created, n_part=n_part, is_part=lambda e: bool(PARTICIPANT_RE.match(e)))
+
+
+def _delete_user(db, u, keepers: dict) -> str | None:
+    """Elimina una cuenta pasando sus convocatorias a otra cuenta de la misma empresa. Devuelve un motivo si no se pudo."""
+    if u["role"] not in ("reclutador", "jefe"):
+        return "solo se eliminan cuentas de reclutamiento o de jefe de área"
+    if db.execute("SELECT 1 FROM sus_responses WHERE user_id=?", (u["id"],)).fetchone():
+        return "respondió el SUS (se conserva para no perder datos del estudio)"
+    col = "owner_id" if u["role"] == "reclutador" else "boss_id"
+    if db.execute(f"SELECT 1 FROM vacancies WHERE {col}=?", (u["id"],)).fetchone():
+        target = keepers.get(u["role"])
+        if not target or target == u["id"]:
+            return "tiene convocatorias y no hay otra cuenta del mismo perfil que las reciba"
+        db.execute(f"UPDATE vacancies SET {col}=? WHERE {col}=?", (target, u["id"]))
+    db.execute("DELETE FROM users WHERE id=?", (u["id"],))
+    return None
+
+
+def _keepers(db, company_id: int, exclude=()) -> dict:
+    out = {}
+    for role in ("reclutador", "jefe"):
+        rows = db.execute("SELECT id, email FROM users WHERE role=? AND company_id=? AND email NOT LIKE ? ORDER BY id", (role, company_id, "escenario-e%@localmatch.local")).fetchall()
+        rows = [r for r in rows if r["id"] not in exclude]
+        real = [r for r in rows if not PARTICIPANT_RE.match(r["email"])]
+        pick = (real or rows)
+        out[role] = pick[0]["id"] if pick else None
+    return out
+
+
+@router.get("/admin/companies/{company_id}")
+def company_detail(request: Request, company_id: int, user=Depends(require("admin"))):
+    return _company_page(request, company_id)
+
+
+@router.post("/admin/users/{uid}/edit")
+def user_edit(request: Request, uid: int, name: str = Form(...), email: str = Form(...), user=Depends(require("admin"))):
+    name, email = " ".join(name.split())[:80], email.strip().lower()[:120]
+    with get_db() as db:
+        u = db.execute("SELECT id, company_id, role FROM users WHERE id=?", (uid,)).fetchone()
+        if not u or u["role"] not in ("reclutador", "jefe"):
+            raise HTTPException(404, "Cuenta no encontrada.")
+        if len(name) < 2 or not EMAIL_RE.match(email):
+            return go(request, f"/admin/companies/{u['company_id']}", "Revisa el nombre y el correo.")
+        if db.execute("SELECT 1 FROM users WHERE email=? AND id<>?", (email, uid)).fetchone():
+            return go(request, f"/admin/companies/{u['company_id']}", "Ya existe otra cuenta con ese correo.")
+        db.execute("UPDATE users SET name=?, email=? WHERE id=?", (name, email, uid))
+        audit(db, user["id"], "cuenta_editada", "usuario", uid, email)
+    return go(request, f"/admin/companies/{u['company_id']}", "Cuenta actualizada.")
+
+
+@router.post("/admin/users/{uid}/reset-password")
+def user_reset(request: Request, uid: int, user=Depends(require("admin"))):
+    pw = secrets.token_urlsafe(9)
+    with get_db() as db:
+        u = db.execute("SELECT id, email, company_id, role FROM users WHERE id=?", (uid,)).fetchone()
+        if not u or u["role"] not in ("reclutador", "jefe"):
+            raise HTTPException(404, "Cuenta no encontrada.")
+        db.execute("UPDATE users SET pw_hash=? WHERE id=?", (hash_password(pw), uid))
+        audit(db, user["id"], "contrasena_restablecida", "usuario", uid, u["email"])
+    return _company_page(request, u["company_id"], created=(u["email"], pw))
+
+
+@router.post("/admin/users/{uid}/delete")
+def user_delete(request: Request, uid: int, user=Depends(require("admin"))):
+    with get_db() as db:
+        u = db.execute("SELECT id, email, role, company_id FROM users WHERE id=?", (uid,)).fetchone()
+        if not u:
+            raise HTTPException(404, "Cuenta no encontrada.")
+        why = _delete_user(db, u, _keepers(db, u["company_id"], exclude=(uid,)))
+        if not why:
+            audit(db, user["id"], "cuenta_eliminada", "usuario", uid, u["email"])
+    return go(request, f"/admin/companies/{u['company_id']}", f"No se eliminó: {why}." if why else "Cuenta eliminada.")
+
+
+@router.post("/admin/companies/{company_id}/clean-participants")
+def clean_participants(request: Request, company_id: int, user=Depends(require("admin"))):
+    deleted, skipped = 0, []
+    with get_db() as db:
+        parts = [u for u in db.execute("SELECT id, email, role FROM users WHERE company_id=? ORDER BY id", (company_id,)).fetchall() if PARTICIPANT_RE.match(u["email"])]
+        keepers = _keepers(db, company_id, exclude=tuple(u["id"] for u in parts))
+        for u in parts:
+            why = _delete_user(db, u, keepers)
+            if why:
+                skipped.append(f"{u['email']} ({why})")
+            else:
+                deleted += 1
+        audit(db, user["id"], "participantes_eliminados", "empresa", company_id, f"{deleted} eliminadas; {len(skipped)} omitidas")
+    msg = f"Se eliminaron {deleted} cuenta(s) de participantes." + (f" No se pudieron eliminar {len(skipped)}: " + "; ".join(skipped[:3]) if skipped else "")
+    return go(request, f"/admin/companies/{company_id}", msg)

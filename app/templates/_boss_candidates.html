@@ -8,6 +8,7 @@
       {% if c.final_decision %}<span class="badge {{ 'ok' if c.final_decision=='Contratado' else 'bad' }}">{{ c.final_decision }}</span>{% endif %}</div>
     {% if c.applicant_email %}<p class="ev" style="margin:6px 0"><b>Contacto:</b> {{ c.applicant_email }}{% if c.applicant_phone %} · {{ c.applicant_phone }}{% endif %}{% if c.applicant_district %} · {{ c.applicant_district }}{% endif %}</p>{% endif %}
     {% if c.exp_role %}<p class="ev" style="margin:4px 0"><b>Última experiencia:</b> {{ c.exp_role }} en {{ c.exp_company }} ({{ c.exp_time }}). {{ c.exp_description }}</p>{% endif %}
+    {% if not c.eligible %}<p><span class="flag" style="background:var(--warn-soft,#fff4e0);color:#8a5a00">Opción alterna: reclutamiento lo envió aunque{% if c.sc.must_missing %} no cumple {{ c.sc.must_missing|join(', ') }}{% elif c.knock_fail %} respondió «No» a una pregunta excluyente{% else %} el agente no lo incluyó en su top{% endif %}.</span></p>{% endif %}
     <div class="bar"><i style="width:{{ c.score or 0 }}%"></i></div><b>{{ c.score }}</b> <span class="hint">de 100 puntos</span>
     <p style="margin:8px 0">{{ c.explanation }}</p>
     <div class="chips">{% for t in c.profile.must_found %}<span>✓ {{ t }}</span>{% endfor %}{% for t in c.sc.must_missing %}<span class="miss">✗ {{ t }}</span>{% endfor %}{% for t in c.profile.nice_found %}<span class="opt">+ {{ t }}</span>{% endfor %}</div>

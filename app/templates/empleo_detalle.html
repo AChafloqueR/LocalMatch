@@ -20,9 +20,9 @@
   <div class="grid">
     <div><label>Celular <span class="hint">(9 dígitos, empieza con 9)</span></label>
       <input type="text" name="phone" required inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" placeholder="987654321" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
-    <div><label>¿Dónde vives actualmente?</label>
-      <select name="district" required><option value="">Elige tu distrito…</option>{% for d in districts %}<option>{{ d }}</option>{% endfor %}<option>{{ other }}</option></select></div>
-    <div><label>Si elegiste «Otro», ¿cuál?</label><input type="text" name="district_other" maxlength="60"></div>
+    <div><label>Departamento</label><select name="dept" id="dept" required><option value="">Cargando…</option></select></div>
+    <div><label>Provincia</label><select name="prov" id="prov" required><option value="">Elige primero el departamento</option></select></div>
+    <div><label>Distrito</label><select name="district" id="dist" required><option value="">Elige primero la provincia</option></select></div>
   </div>
   <h2 style="margin-top:18px">Cuéntanos tu última experiencia</h2>
   <div class="grid">
@@ -40,5 +40,20 @@
   <p class="hint">El agente evalúa una versión anonimizada de tu CV. La decisión final siempre la toma una persona.</p>
   <p><button class="btn">Enviar postulación</button></p>
 </form>
+<script>
+(async function () {
+  const data = await (await fetch('/static/ubigeo.json')).json();
+  const dep = document.getElementById('dept'), prov = document.getElementById('prov'), dist = document.getElementById('dist');
+  function fill(sel, items, placeholder) {
+    sel.replaceChildren(new Option(placeholder, ''));
+    items.forEach(x => sel.appendChild(new Option(x, x)));
+  }
+  function setProv() { const d = data.find(x => x.n === dep.value); fill(prov, d ? d.p.map(p => p.n) : [], d ? 'Provincia…' : 'Elige primero el departamento'); setDist(); }
+  function setDist() { const d = data.find(x => x.n === dep.value); const p = d && d.p.find(x => x.n === prov.value); fill(dist, p ? p.d : [], p ? 'Distrito…' : 'Elige primero la provincia'); }
+  fill(dep, data.map(d => d.n), 'Departamento…');
+  dep.addEventListener('change', setProv); prov.addEventListener('change', setDist);
+  dep.value = 'La Libertad'; setProv(); prov.value = 'Trujillo'; setDist();
+})();
+</script>
 {% endif %}
 {% endblock %}

@@ -12,7 +12,7 @@
     <select name="top_n">{% for n in range(3, 11) %}<option {{ 'selected' if n == f.top_n }}>{{ n }}</option>{% endfor %}</select></div>
 </div>
 <h2 style="margin-top:20px">Requisitos del puesto</h2>
-<p class="hint">Solo requisitos objetivos y ligados al puesto: herramientas o habilidades, formación, certificaciones e idiomas. No se usan edad, sexo ni estado civil. «Excluyente» significa que sin ese requisito el candidato no entra al top. El peso (1 a 5) indica cuánto suma. Los sinónimos (separados por comas) ayudan al agente a reconocer el requisito, por ejemplo «hojas de cálculo» para Excel.</p>
+<p class="hint">Solo requisitos objetivos y ligados al puesto: herramientas o habilidades, formación, certificaciones e idiomas. No se usan edad, sexo ni estado civil. «Excluyente» significa que sin ese requisito el candidato no entra al top. El peso (1 a 5) indica cuánto suma. Los sinónimos (separados por comas) ayudan al agente a reconocer el requisito, por ejemplo «hojas de cálculo» para Excel. <b>Importante:</b> el agente busca estas palabras en el CV, así que usa nombres cortos («Excel», no «Excel avanzado») y agrega variantes como sinónimos.</p>
 <table class="reqs">
   <tr><th>Requisito</th><th>Tipo</th><th>Peso</th><th>Excluyente</th><th>Sinónimos</th></tr>
   {% for r in f.rows %}{% set i = loop.index %}

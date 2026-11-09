@@ -10,6 +10,11 @@ Incluye perfiles diferenciados (reclutamiento / jefe de área / investigación) 
 4. El **jefe de área** ve candidatos anonimizados con su explicación y decide: entrevistar, en espera o descartar.
 5. Ambos perfiles responden el **SUS** dentro del sistema; el perfil de investigación descarga el CSV.
 
+## Novedades de la versión 1.5
+- **Ubicación completa:** el formulario del postulante usa Departamento → Provincia → Distrito con los 25 departamentos, 196 provincias y 1,892 distritos del Perú (UBIGEO, dominio público CC0), validados también en el servidor. Algunos nombres fuera de La Libertad pueden no tener tilde.
+- **Gestión de cuentas** (administrador, ficha de cada empresa): editar nombre y correo, restablecer la contraseña (se muestra una sola vez), eliminar cuentas y limpiar de una vez las cuentas de participantes (rec01…, jef01…). Las convocatorias de una cuenta eliminada pasan a otra del mismo perfil; no se elimina a quien ya respondió el SUS.
+- El jefe ve un aviso «Opción alterna» cuando reclutamiento le envía un candidato que el agente no incluyó en su top.
+
 ## Novedades de la versión 1.4
 - **Inicio del jefe de área:** «Hola, [nombre]», su perfil en letras más pequeñas («Jefe de Área» y su empresa) y, debajo, los candidatos que la reclutadora le envió (con contacto, explicación, descarga de CV, decisión, entrevista y evaluación). Al enviar un candidato, reclutamiento ve el nombre y el correo del jefe que lo recibirá.
 - **Administrador de LocalMatch** (perfil `admin`, el que se crea con `ADMIN_EMAIL`): su inicio muestra todas las empresas con sus cuentas, convocatorias y postulaciones, y una ficha por empresa.
