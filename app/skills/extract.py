@@ -49,12 +49,21 @@ def matched_term(n: str, item: dict) -> str | None:
     return None
 
 
-def extract_profile(text: str, items: list[dict]) -> dict:
+def extract_profile(text: str, items: list[dict], use_llm: bool | None = None) -> dict:
+    """Extraer perfil de CV.
+    
+    Args:
+        text: Texto del CV anonimizado
+        items: Requisitos de la vacante
+        use_llm: Si usar LLM. None = auto (usar si modelo disponible y rápido)
+    """
     n = norm(text)
     hits = {it["name"]: matched_term(n, it) for it in items}
     must = [i["name"] for i in items if i["mandatory"]]
     nice = [i["name"] for i in items if not i["mandatory"]]
     years, how = years_of_experience(text)
+    
+    # Perfil base con reglas (regex)
     profile = {
         "must_found": [m for m in must if hits[m]],
         "nice_found": [m for m in nice if hits[m]],
@@ -63,22 +72,31 @@ def extract_profile(text: str, items: list[dict]) -> dict:
         "education": education(text),
         "method": "reglas",
     }
-    if llm.provider() != "mock":
+    
+    # Usar LLM solo si está explícitamente pedido y no es mock
+    if use_llm is None:
+        use_llm = llm.provider() != "mock" and llm.complete("Resume este texto en 3 palabras clave máximo.") is not None
+    
+    if use_llm:
         data = llm.complete_json(
-            "Eres un asistente de selección de personal. Lee el CV (ya anonimizado) y responde SOLO un JSON con:\n"
+            f"REQUISITOS OBLIGATORIOS: {must}\nREQUISITOS DESEABLES: {nice}\n\nCV:\n{text[:5000]}",
+            "Eres un asistente de selección de personal. Lee el CV anonimizado y responde SOLO un JSON con:\n"
             '{"must_found": [...], "nice_found": [...], "years": número, "education": "texto"}\n'
-            "Incluye en must_found/nice_found únicamente requisitos de la lista que el CV evidencie "
-            "(se aceptan sinónimos). No inventes datos.\n"
-            f"REQUISITOS OBLIGATORIOS: {must}\nREQUISITOS DESEABLES: {nice}\n\nCV:\n{text[:6000]}",
-            system="Responde únicamente con JSON válido.",
+            "Solo incluye requisitos de la lista que el CV evidencie claramente. Responde únicamente con JSON válido."
         )
+        if data and isinstance(data.get("years"), (int, float)) and data["years"] > 0:
+            years = float(data["years"])
+            how = "interpretada por modelo"
         if data:
-            profile["must_found"] = sorted(set(profile["must_found"]) | {t for t in data.get("must_found", []) if t in must})
-            profile["nice_found"] = sorted(set(profile["nice_found"]) | {t for t in data.get("nice_found", []) if t in nice})
-            if isinstance(data.get("years"), (int, float)) and data["years"] > 0:
-                profile["years"], profile["years_how"] = float(data["years"]), "interpretada por el modelo"
-            if data.get("education"):
-                profile["education"] = str(data["education"])[:60]
+            # Merge LLM results with regex results (union)
+            profile["must_found"] = sorted(set(profile["must_found"]) | set([t for t in data.get("must_found", []) if t in must]))
+            profile["nice_found"] = sorted(set(profile["nice_found"]) | set([t for t in data.get("nice_found", []) if t in nice]))
+            profile["years"] = years
+            profile["years_how"] = how
+            profile["education"] = (str(data.get("education"))[:60] if data.get("education") else "")
             profile["method"] = f"LLM ({llm.provider()}) + reglas"
+        else:
+            profile["method"] = "reglas (fallback LLM fallido)"
+    
     profile["evidence"] = {t: snippet(text, hits.get(t) or t) for t in profile["must_found"] + profile["nice_found"]}
     return profile

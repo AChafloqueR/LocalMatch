@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block title %}Postularme · LocalMatch{% endblock %}
+{% block content %}
+<h1>{{ v.title }}</h1>
+<p class="sub">{{ v.area }} · experiencia mínima: {{ v.min_years|int }} año(s)</p>
+<div class="card">
+  <h2>Descripción</h2>
+  <p>{{ v.description }}</p>
+  {% if v.must %}<p class="hint"><b>Requisitos requeridos:</b> {{ v.must }}</p>{% endif %}
+  {% if v.nice %}<p class="hint"><b>Deseables:</b> {{ v.nice }}</p>{% endif %}
+</div>
+{% if ya %}
+<div class="card">Ya te postulaste a esta vacante. Mira su estado en <a href="/dashboard">tu inicio</a>.</div>
+{% else %}
+<form class="card" method="post" action="/postular/{{ v.id }}" enctype="multipart/form-data">
+  <h2>Sube tu CV</h2>
+  <p class="hint">PDF, DOCX o TXT (máximo 5 MB, <b>1 solo archivo</b>).</p>
+  <input type="file" name="file" accept=".pdf,.docx,.txt" required>
+  <p><button class="btn" style="margin-top:14px">Enviar postulación</button></p>
+</form>
+{% endif %}
+{% endblock %}

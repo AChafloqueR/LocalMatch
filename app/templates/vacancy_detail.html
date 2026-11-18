@@ -13,7 +13,7 @@
 </div>
 
 <div class="card">
-  <div class="chips">{% for i in v['items'] %}<span class="{{ '' if i.mandatory else 'opt' }}">{{ i.name }} · peso {{ i.weight }}{% if i.mandatory %} · excluyente{% endif %}</span>{% else %}<span class="hint">Sin requisitos</span>{% endfor %}</div>
+  <div class="chips">{% for i in v['items'] %}<span class="{{ '' if i.mandatory else 'opt' }}">{{ i.name }} · peso {{ i.weight }}{% if i.mandatory %} · Requerido{% endif %}</span>{% else %}<span class="hint">Sin requisitos</span>{% endfor %}</div>
 </div>
 
 <div class="card">
@@ -21,15 +21,17 @@
   <p class="hint">Los postulantes envían su CV desde el portal. También puedes cargar CV tú mismo (PDF, DOCX o TXT).</p>
   <form id="upl" method="post" action="/vacancies/{{ v.id }}/upload" enctype="multipart/form-data" class="row">
     <input class="grow" type="file" name="files" multiple accept=".pdf,.docx,.txt" required>
-    <button class="btn ghost">Subir y anonimizar</button>
+    <button class="btn ghost">Subir</button>
   </form>
   <label style="font-weight:500;margin-top:10px"><input type="checkbox" name="consent" value="1" form="upl" style="width:auto;margin-right:8px">Declaro que estos CV son sintéticos (ficticios) o que cuento con el consentimiento de sus titulares.</label>
 </div>
 
 <div class="card row">
   <div class="grow"><h2 style="margin:0">2 · Ejecuta el agente</h2><div class="hint">{{ cands|length }} CV recibido(s). El agente evalúa una versión anonimizada y propone los {{ v.top_n }} mejores.</div></div>
-  <form method="post" action="/vacancies/{{ v.id }}/run"><button class="btn" {% if not cands %}disabled style="opacity:.5"{% endif %}>Preseleccionar y ordenar</button></form>
-  <form method="post" action="/vacancies/{{ v.id }}/send-top"><button class="btn ghost" {% if not n_top %}disabled style="opacity:.5"{% endif %}>Enviar los {{ n_top }} mejores al jefe</button></form>
+  <!-- Nueva opción: Anonimizar y preseleccionar -->
+  <form method="post" action="/vacancies/{{ v.id }}/run"><button class="btn" {% if not cands %}disabled style="opacity:.5"{% endif %}>Anonimizar y preseleccionar</button></form>
+  <!-- Opción aparte: Ver solo los seleccionados manualmente -->
+  {% if cands %}<form method="post" action="/vacancies/{{ v.id }}/select-top"><button class="btn ghost" {% if not n_top %}disabled style="opacity:.5"{% endif %}>Enviar los {{ n_top }} mejores al jefe</button></form>{% endif %}
 </div>
 
 <div class="row" style="margin:24px 0 12px"><h2 class="grow" style="margin:0">3 · Ranking y supervisión</h2>
@@ -54,13 +56,13 @@
     {% if c.answers %}<p class="ev" style="margin:4px 0"><b>Respuestas:</b> {% for a in c.answers %}{{ a.text }} <b>{{ a.answer }}</b>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
     {% if c.reject_reason %}<p><span class="flag">Descartado por reclutamiento: {{ c.reject_reason }}</span></p>{% endif %}
     {% if c.score is not none %}
-      {% if c.sc.must_missing %}<span class="flag">No cumple excluyentes: {{ c.sc.must_missing|join(', ') }}</span>{% endif %}
-      {% if c.knock_fail %}<span class="flag">Respondió «No» a una pregunta excluyente</span>{% endif %}
+      {% if c.sc.must_missing %}<span class="flag">No cumple requeridos: {{ c.sc.must_missing|join(', ') }}</span>{% endif %}
+      {% if c.knock_fail %}<span class="flag">Respondió «No» a una pregunta requerida</span>{% endif %}
       <div class="bar"><i style="width:{{ c.score }}%"></i></div>
       <b>{{ c.score }}</b> <span class="hint">de 100 puntos</span>
       <p style="margin:8px 0">{{ c.explanation }}</p>
       <div class="parts">
-        <div><b>{{ c.sc.parts.must }}%</b>excluyentes</div><div><b>{{ c.sc.parts.nice }}%</b>deseables</div>
+        <div><b>{{ c.sc.parts.must }}%</b>Requeridos</div><div><b>{{ c.sc.parts.nice }}%</b>Deseables</div>
         <div><b>{{ c.sc.parts.exp }}%</b>experiencia</div><div><b>{{ c.sc.parts.sem }}%</b>afinidad semántica</div>
       </div>
       <div class="chips">{% for t in c.profile.must_found %}<span>✓ {{ t }}</span>{% endfor %}{% for t in c.sc.must_missing %}<span class="miss">✗ {{ t }}</span>{% endfor %}{% for t in c.profile.nice_found %}<span class="opt">+ {{ t }}</span>{% endfor %}</div>
@@ -74,13 +76,14 @@
     {% if not c.reject_reason %}
     <details><summary>Descartar con motivo</summary>
       <form method="post" action="/candidates/{{ c.id }}/reject" class="row" style="margin-top:8px">
-        <select name="reason" style="width:auto"><option>No cumple los requisitos excluyentes</option><option>Experiencia insuficiente</option><option>Perfil no alineado al puesto</option><option>Otro motivo</option></select>
+        <select name="reason" style="width:auto"><option>No cumple los requisitos requeridos</option><option>Experiencia insuficiente</option><option>Perfil no alineado al puesto</option><option>Otro motivo</option></select>
         <input class="grow" type="text" name="note" placeholder="Detalle (opcional)"><button class="btn danger small">Descartar</button></form></details>
     {% else %}<form method="post" action="/candidates/{{ c.id }}/reopen" style="margin-top:8px"><button class="btn ghost small">Reabrir candidato</button></form>{% endif %}
   </div>
   <div style="display:grid;gap:8px;align-content:start">
     <form method="post" action="/candidates/{{ c.id }}/shortlist"><button class="btn small {{ 'ghost' if c.shortlisted else '' }}">{{ 'Quitar de la lista' if c.shortlisted else 'Enviar al jefe' }}</button></form>
     {% if c.has_file %}<a class="btn ghost small" href="/candidates/{{ c.id }}/cv">Descargar CV</a>{% endif %}
+    {% if c.original_file %}<a class="btn ghost small" href="/candidates/{{ c.id }}/original">Ver CV original</a>{% endif %}
     <form method="post" action="/candidates/{{ c.id }}/delete" onsubmit="return confirm('¿Eliminar este CV?')"><button class="btn danger small">Eliminar CV</button></form>
   </div>
 </div>

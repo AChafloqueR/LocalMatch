@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block title %}Inicio · LocalMatch{% endblock %}
+{% block content %}
+<h1>Hola, {{ user.name.split()[0] }}</h1>
+<p class="sub">Estas son las vacantes abiertas. Postúlate con tu CV y sigue el estado de cada postulación aquí.</p>
+
+<h2>Mis postulaciones</h2>
+{% if aps %}<div class="grid">
+{% for a in aps %}
+  <div class="card">
+    <span class="badge">{{ a.area }}</span>
+    <h2 style="margin-top:10px">{{ a.title }}</h2>
+    <p class="hint">Estado: <b>{{ estados[a.vacancy_id] }}</b></p>
+  </div>
+{% endfor %}</div>
+{% else %}<div class="card empty">Aún no te postulaste a ninguna vacante.</div>{% endif %}
+
+<div class="row" style="margin:18px 0 12px"><h2 class="grow" style="margin:0">Vacantes abiertas</h2></div>
+{% if vacs %}<div class="grid">
+{% for v in vacs %}
+  <div class="card">
+    <span class="badge">{{ v.area }}</span>
+    <h2 style="margin-top:10px">{{ v.title }}</h2>
+    <p class="hint">{{ v.description }}</p>
+    {% if v.id in estados %}<p class="hint">Ya te postulaste a esta vacante.</p>
+    {% else %}<a class="btn small" href="/postular/{{ v.id }}">Postularme</a>{% endif %}
+  </div>
+{% endfor %}</div>
+{% else %}<div class="card empty">Aún no hay vacantes abiertas.</div>{% endif %}
+{% endblock %}

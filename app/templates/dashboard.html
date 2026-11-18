@@ -19,13 +19,9 @@
 </div>
 {% endif %}
 
-{% if user.role in ('reclutador','jefe') and not sus_done and (not task or task.done) %}
-<div class="card row" style="background:var(--brand-soft);border-color:transparent">
-  <div class="grow"><b>Evalúa la usabilidad de LocalMatch</b><div class="hint">Son 10 afirmaciones y toma unos 3 minutos. Tu respuesta ayuda a un estudio académico.</div></div>
-  <a class="btn" href="/sus">Responder el SUS</a>
-</div>{% endif %}
 
-{% if metrics %}
+
+{% if metrics and metrics.recibidas > 0 %}
 <div class="card">
   <h2>Beneficio para tu empresa</h2>
   <div class="grid" style="margin:10px 0">
@@ -40,7 +36,7 @@
 
 {% if user.role == 'admin' %}
 <div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Empresas</h2>
-  <a class="btn ghost small" href="/admin/users">Gestionar empresas y cuentas</a><a class="btn ghost small" href="/admin/sus">Resultados SUS</a><a class="btn ghost small" href="/admin/audit">Auditoría</a></div>
+  <a class="btn ghost small" href="/admin/users">Gestionar empresas y cuentas</a><a class="btn ghost small" href="/admin/audit">Auditoría</a></div>
 {% if companies %}<div class="grid">
 {% for c in companies %}
   <div class="card"><h2>{{ c.name }}</h2>

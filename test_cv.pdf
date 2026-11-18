@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LocalMatch</title>
+<link rel="stylesheet" href="/static/style.css">
+</head><body>
+<header class="nav"><div class="in">
+  <a class="logo" href="/">Local<span>Match</span></a>
+  
+  
+  <nav class="links">
+    <a href="/dashboard">Inicio</a>
+    <a href="/vacancies/new">Nueva convocatoria</a>
+    
+    <a href="/empleos" target="_blank" rel="noopener">Portal de empleos</a>
+    
+  </nav>
+  <span class="who">Rosa Reclutadora · Empresa de práctica · Reclutamiento</span>
+  <form method="post" action="/logout"><button class="btn ghost small">Salir</button></form>
+  
+</div></header>
+<main>
+  
+  
+<div class="card empty"><div class="big">404</div><p>No hay archivo original disponible.</p><a class="btn" href="/dashboard">Volver al inicio</a></div>
+
+  <p class="foot">LocalMatch · apoyo a la preselección con supervisión humana · modo del agente: mock</p>
+</main>
+</body></html>

@@ -7,8 +7,8 @@
 <div class="card">
   <h2>Descripción</h2><p>{{ v.description }}</p>
   <h2 style="margin-top:14px">Requisitos</h2>
-  <div class="chips">{% for i in items %}<span class="{{ '' if i.mandatory else 'opt' }}">{{ i.name }}{% if i.mandatory %} · excluyente{% endif %}</span>{% endfor %}</div>
-  <p class="hint">Los requisitos marcados «excluyente» son indispensables. No se evalúan datos como edad, sexo o estado civil.</p>
+  <div class="chips">{% for i in items %}<span class="{{ '' if i.mandatory else 'opt' }}">{{ i.name }}{% if i.mandatory %} · Requerido{% endif %}</span>{% endfor %}</div>
+  <p class="hint">Los requisitos marcados «Requerido» son indispensables.</p>
 </div>
 {% if applied %}
 <div class="card"><h2>Ya postulaste a esta convocatoria</h2><p><a class="btn" href="/mis-postulaciones">Ver el estado en «Mis postulaciones»</a></p></div>
@@ -32,7 +32,7 @@
   </div>
   <label>¿Qué hacías? <span class="hint">(mínimo 20 caracteres)</span></label><textarea name="exp_desc" required minlength="20" maxlength="1200"></textarea>
   {% if questions %}<h2 style="margin-top:18px">Preguntas de la convocatoria</h2>
-  {% for q in questions %}<div class="row" style="margin:8px 0"><span class="grow">{{ q.text }}{% if q.mandatory %} <span class="badge warn">excluyente</span>{% endif %}</span>
+  {% for q in questions %}<div class="row" style="margin:8px 0"><span class="grow">{{ q.text }}{% if q.mandatory %} <span class="badge warn">Requerido</span>{% endif %}</span>
     <select name="ans_{{ loop.index }}" required style="width:auto"><option value="">…</option><option>Sí</option><option>No</option></select></div>{% endfor %}{% endif %}
   <label style="margin-top:16px">Tu CV <span class="hint">(PDF, DOCX o TXT, máximo 5 MB)</span></label><input type="file" name="cv" accept=".pdf,.docx,.txt" required>
   <label style="font-weight:500;margin-top:16px"><input type="checkbox" name="adult" value="1" required style="width:auto;margin-right:8px">Soy mayor de 18 años.</label>

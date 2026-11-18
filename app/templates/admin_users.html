@@ -55,4 +55,47 @@
   <select name="company_id"><option value="">Sin empresa</option>{% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
   <p><button class="btn">Crear cuenta</button></p>
 </form>
+
+<!-- Formulario para eliminar convocatoria (solo admin) -->
+{% if companies %}
+<div class="card" style="margin-top:20px;">
+  <h3>⚠️ Eliminar convocatoria</h3>
+  <p class="hint">Selecciona una empresa para ver sus convocatorias y eliminarlas.</p>
+  <select name="company_id" style="width:100%;margin-bottom:10px">
+    <option value="">Empresa...</option>
+    {% for c in companies %}<option value="{{ c.id }}">{{ c.name }} ({{ c.vac }} convocatorias)</option>{% endfor %}
+  </select>
+  <select name="vacancy_id" style="width:100%;margin-bottom:10px">
+    <option value="">Vacante...</option>
+  </select>
+  <button class="btn danger small" disabled id="deleteBtn">Eliminar convocatoria</button>
+</div>
+{% endif %}
+<script>
+  // Actualizar el select de vacantes cuando cambie la empresa
+  const companySelect = document.querySelector('select[name="company_id"]');
+  const vacancySelect = document.querySelector('select[name="vacancy_id"]');
+  const deleteBtn = document.getElementById('deleteBtn');
+  
+  companySelect.addEventListener('change', function() {
+    const companyId = this.value;
+    // Hacer fetch para obtener vacantes de esta empresa
+    fetch(`/admin/vacancies/company/${companyId}`)
+      .then(response => response.json())
+      .then(data => {
+        vacancySelect.innerHTML = '<option value="">Vacante...</option>';
+        data.vacancies.forEach(v => {
+          const option = document.createElement('option');
+          option.value = v.id;
+          option.text = `${v.title} (${v.area})`;
+          vacancySelect.add(option);
+        });
+        if (data.vacancies.length > 0) {
+          deleteBtn.disabled = false;
+        } else {
+          deleteBtn.disabled = true;
+        }
+      });
+  });
+</script>
 {% endblock %}
