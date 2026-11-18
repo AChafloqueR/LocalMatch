@@ -10,6 +10,11 @@ Incluye perfiles diferenciados (reclutamiento / jefe de área / investigación) 
 4. El **jefe de área** ve candidatos anonimizados con su explicación y decide: entrevistar, en espera o descartar.
 5. Ambos perfiles responden el **SUS** dentro del sistema; el perfil de investigación descarga el CSV.
 
+## Novedades de la versión 1.6
+- **SUS completo:** cuestionario de 10 ítems (radio 1-5) en `/sus` para reclutador y jefe de área, con consentimiento obligatorio. Resultados por perfil en `/admin/sus` y exportación CSV en `/admin/sus.csv`. La tabla `sus_responses` incluye `role`, `category`, `answers_json` y compatibilidad hacia atrás.
+- **Registro con verificación:** CAPTCHA matemático simple ("¿cuánto es X + Y?") en `/registro` para evitar bots.
+- **Usuario postulante demo:** `postulante@demo.com` / `demo12345` creado por `scripts.seed --demo`.
+
 ## Novedades de la versión 1.5
 - **Ubicación completa:** el formulario del postulante usa Departamento → Provincia → Distrito con los 25 departamentos, 196 provincias y 1,892 distritos del Perú (UBIGEO, dominio público CC0), validados también en el servidor. Algunos nombres fuera de La Libertad pueden no tener tilde.
 - **Gestión de cuentas** (administrador, ficha de cada empresa): editar nombre y correo, restablecer la contraseña (se muestra una sola vez), eliminar cuentas y limpiar de una vez las cuentas de participantes (rec01…, jef01…). Las convocatorias de una cuenta eliminada pasan a otra del mismo perfil; no se elimina a quien ya respondió el SUS.
@@ -85,8 +90,8 @@ Ver `docs/DESPLIEGUE.md` (GitHub → pruebas automáticas → Render → Postgre
 
 ## Estudio SUS (60 usuarios)
 ```bash
-python -m scripts.create_users --role reclutador --count 30
-python -m scripts.create_users --role jefe --count 30
+python -m scripts.create_users --role reclutador --count 30 --company-id 1
+python -m scripts.create_users --role jefe --count 30 --company-id 1
 ```
 En producción puedes crear las cuentas desde la web (menú *Participantes* del perfil de investigación). Cada participante entra, usa el sistema en una tarea real y responde `/sus`. Luego, con el usuario `admin`, descarga `/admin/sus.csv` y ejecuta:
 ```bash
