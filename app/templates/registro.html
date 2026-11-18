@@ -6,7 +6,7 @@
     <label>Nombre completo</label><input type="text" name="name" required maxlength="80" value="{{ f.get('name','') }}">
     <label>Correo</label><input type="email" name="email" required maxlength="120" value="{{ f.get('email','') }}">
     <label>Contraseña <span class="hint">(mínimo 8 caracteres)</span></label><input type="password" name="password" required minlength="8">
-    <label>Verificación: ¿cuánto es {{ cap }}?</label><input type="text" name="cap" required inputmode="numeric" autocomplete="off">
+    <label>Verificación: ¿cuánto es {{ cap_a }} + {{ cap_b }}?</label><input type="text" name="cap" required maxlength="2" style="width:60px">
     <p><button class="btn" style="width:100%;margin-top:18px">Crear cuenta</button></p>
   </form>
   <p class="hint" style="text-align:center">¿Ya tienes cuenta? <a href="/login"><b>Ingresar</b></a></p>

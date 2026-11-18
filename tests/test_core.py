@@ -167,11 +167,11 @@ def test_consentimiento_obligatorio_y_formatos(client):
 
 def test_editar_cerrar_y_requisitos_con_peso(client):
     c = client; login(c, "r@t.l"); vid = new_vac(c, published=False)
-    assert "SQL · peso 5 · excluyente" in c.get(f"/vacancies/{vid}").text
+    assert "SQL · peso 5 · Requerido" in c.get(f"/vacancies/{vid}").text
     c.post(f"/vacancies/{vid}/edit", data={"title": "Analista Senior", "area": "Ops", "description": "x", "min_years": "2", "boss_id": 2, "top_n": "5",
                                           "rq_name_1": "Tableau", "rq_weight_1": "4", "rq_mand_1": "1"})
     t = c.get(f"/vacancies/{vid}").text
-    assert "Analista Senior" in t and "Tableau · peso 4 · excluyente" in t and "SQL ·" not in t
+    assert "Analista Senior" in t and "Tableau · peso 4 · Requerido" in t and "SQL ·" not in t
     upload_internal(c, vid)
     c.post(f"/vacancies/{vid}/toggle-status")
     assert "Cerrada" in c.get(f"/vacancies/{vid}").text and "está cerrada" in upload_internal(c, vid).text
@@ -281,7 +281,7 @@ def test_excluyentes_preguntas_y_top_n(client):
     assert json.loads(rows["Post 2"]["breakdown_json"])["meets_mandatory"] is False        # no cumple SQL ni Excel
     login(c, "r@t.l")
     page = c.get(f"/vacancies/{vid}").text
-    assert "Top 3" in page and "No cumple excluyentes" in page and "Respondió «No»" in page
+    assert "Top 3" in page and "No cumple requeridos" in page and "Respondió «No»" in page
     assert page.count('class="badge ok">Top 3') == 2                                       # solo 2 candidatos son elegibles
     assert "Enviar los 2 mejores al jefe" in page
     c.post(f"/vacancies/{vid}/send-top")

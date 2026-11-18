@@ -1,6 +1,5 @@
 """Portal del postulante: registro, convocatorias, postulación con CV y seguimiento en «Mis postulaciones»."""
 import hashlib
-import random
 import re
 import secrets
 
@@ -56,38 +55,37 @@ def _open_vacancy(db, vid: int):
     return v
 
 
+import random
+
 # ---------- registro ----------
-def _captcha(request: Request) -> str:
-    a, b = random.randint(2, 9), random.randint(2, 9)
-    request.session["cap"] = a + b
-    return f"{a} + {b}"
-
-
 @router.get("/registro")
 def registro_form(request: Request):
-    return page(request, "registro.html", cap=_captcha(request), f={})
+    a, b = random.randint(1, 9), random.randint(1, 9)
+    request.session["cap_a"], request.session["cap_b"] = a, b
+    return page(request, "registro.html", f={}, cap_a=a, cap_b=b)
 
 
 @router.post("/registro")
 async def registro(request: Request):
     form = await request.form()
     name, email, pw = " ".join(str(form.get("name", "")).split())[:80], str(form.get("email", "")).strip().lower()[:120], str(form.get("password", ""))
+    cap = str(form.get("cap", ""))
     f = {"name": name, "email": email}
 
     def fail(msg):
         request.session["flash"] = msg
-        return page(request, "registro.html", cap=_captcha(request), f=f)
-
-    try:
-        ok = int(str(form.get("cap", "")).strip()) == request.session.get("cap")
-    except ValueError:
-        ok = False
-    if not ok:
-        return fail("La suma no es correcta. Inténtalo de nuevo.")
+        a, b = request.session.get("cap_a", 1), request.session.get("cap_b", 1)
+        return page(request, "registro.html", f=f, cap_a=a, cap_b=b)
     if len(name) < 3 or not EMAIL_RE.match(email):
         return fail("Revisa tu nombre y tu correo.")
     if len(pw) < 8:
         return fail("La contraseña debe tener al menos 8 caracteres.")
+    expected = request.session.get("cap_a", 1) + request.session.get("cap_b", 1)
+    try:
+        if int(cap) != expected:
+            return fail("La suma no es correcta.")
+    except ValueError:
+        return fail("La suma no es correcta.")
     with get_db() as db:
         if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
             return fail("Ya existe una cuenta con ese correo. Ingresa con tu contraseña.")
@@ -183,7 +181,7 @@ async def postular(request: Request, vid: int):
             "INSERT INTO candidates(vacancy_id,filename,redacted_text,applicant_name,applicant_email,applicant_phone,applicant_district,user_id,"
             "exp_role,exp_company,exp_time,exp_description,original_file,original_mime,cv_hash,answers_json,adult_confirmed,tracking_code,consent_at,source)"
             " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,CURRENT_TIMESTAMP,'postulante')",
-            (vid, fname[:120], redact(text) + "\n\n" + redact(experience, strip_first_line=False), u["name"], u["email"], phone, place, u["id"], exp_role, exp_company, exp_time, exp_desc,
+            (vid, fname[:120], text + "\n\n" + experience, u["name"], u["email"], phone, place, u["id"], exp_role, exp_company, exp_time, exp_desc,
              data, getattr(cv, "content_type", None), digest, __import__("json").dumps(answers, ensure_ascii=False), secrets.token_hex(4).upper()))
         audit(db, u["id"], "postulacion_recibida", "candidato", cid, f"vacante {vid}; consentimiento y mayoría de edad confirmados")
     run_agent(vid)  # evaluación automática al recibir la postulación

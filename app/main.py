@@ -18,8 +18,6 @@ from .db import audit, get_db, init_db
 from .parsing import extract_text
 from .skills.pipeline import run_agent, vacancy_dict
 from .skills.redact import redact
-from .sus import ITEMS, category, describe, sus_score
-
 BASE = os.path.dirname(__file__)
 app = FastAPI(title="LocalMatch")
 app.add_middleware(
@@ -89,6 +87,17 @@ def health():
     return {"ok": True, "llm": llm.provider()}
 
 
+# ---------- páginas legales (públicas) ----------
+@app.get("/terminos")
+def terminos(request: Request):
+    return page(request, "terminos.html")
+
+
+@app.get("/privacidad")
+def privacidad(request: Request):
+    return page(request, "privacidad.html")
+
+
 # ---------- acceso ----------
 @app.get("/")
 def home(request: Request):
@@ -114,6 +123,45 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
 def logout(request: Request):
     request.session.clear()
     return go(request, "/login")
+
+
+# ---------- SUS ----------
+from .sus import ITEMS, sus_score, category
+
+
+@app.get("/sus")
+def sus_form(request: Request, user=Depends(require("reclutador", "jefe"))):
+    if not sus_unlocked(user):
+        return go(request, "/dashboard", "Primero completa tu tarea del estudio para habilitar el cuestionario.")
+    with get_db() as db:
+        if db.execute("SELECT 1 FROM sus_responses WHERE user_id=?", (user["id"],)).fetchone():
+            return go(request, "/dashboard", "Ya respondiste el cuestionario.")
+    return page(request, "sus.html", items=ITEMS)
+
+
+@app.post("/sus")
+async def sus_submit(request: Request, user=Depends(require("reclutador", "jefe"))):
+    if not sus_unlocked(user):
+        return go(request, "/dashboard", "Primero completa tu tarea del estudio para habilitar el cuestionario.")
+    form = await request.form()
+    if not form.get("consent"):
+        return go(request, "/sus", "Debes aceptar el uso de tus respuestas para el estudio.")
+    try:
+        answers = [int(form.get(f"q{i}", 0)) for i in range(1, 11)]
+        if any(a not in (1, 2, 3, 4, 5) for a in answers):
+            raise ValueError
+    except (ValueError, TypeError):
+        return go(request, "/sus", "Responde todas las preguntas con valores entre 1 y 5.")
+    score = sus_score(answers)
+    cat = category(score)
+    with get_db() as db:
+        db.execute("""INSERT INTO sus_responses(user_id,role,score,category,answers_json,profile,answers)
+                       VALUES(?,?,?,?,?,?,?)
+                       ON CONFLICT(user_id) DO UPDATE SET role=excluded.role, score=excluded.score,
+                       category=excluded.category, answers_json=excluded.answers_json, profile=excluded.profile, answers=excluded.answers""",
+                   (user["id"], user["role"], score, cat, json.dumps(answers, ensure_ascii=False), user["role"], json.dumps(answers, ensure_ascii=False)))
+        audit(db, user["id"], "sus_respondido", "usuario", user["id"], f"score={score:.1f} cat={cat}")
+    return go(request, "/dashboard", f"Gracias! Tu puntaje SUS: {score:.1f} ({cat}).")
 
 
 @app.get("/dashboard")
@@ -285,6 +333,20 @@ def vacancy_detail(request: Request, vid: int, user=Depends(require("reclutador"
     return page(request, "vacancy_detail.html", v=vd, cands=rows, boss=boss, n_top=sum(1 for r in rows if r["in_top"]), n_sel=sum(1 for r in rows if r["shortlisted"]))
 
 
+@app.post("/vacancies/{vid}/select-top")
+def select_top(request: Request, vid: int, user=Depends(require("reclutador"))):
+    with get_db() as db:
+        v = _own_vacancy(db, vid, user)
+        # Marcar los top N candidatos (según score) como shortlisted para enviarlos al jefe
+        candidates = db.execute("SELECT * FROM candidates WHERE vacancy_id=? ORDER BY score IS NULL, score DESC", (vid,)).fetchall()
+        top_n = min(v["top_n"], len(candidates))
+        for i, c in enumerate(candidates):
+            if i < top_n:
+                db.execute("UPDATE candidates SET shortlisted=? WHERE id=?", (1 if i < top_n else 0, c["id"]))
+        audit(db, user["id"], "candidatos_seleccionados", "vacante", vid, f"{top_n} candidatos seleccionados para enviar al jefe")
+    return go(request, f"/vacancies/{vid}", f"{top_n} candidatos seleccionados y enviados al jefe de área.")
+
+
 @app.post("/vacancies/{vid}/upload")
 async def upload(request: Request, vid: int, files: list[UploadFile] = File(...), consent: str = Form(""),
                  user=Depends(require("reclutador"))):
@@ -306,11 +368,14 @@ async def upload(request: Request, vid: int, files: list[UploadFile] = File(...)
             except Exception:
                 bad += 1
                 continue
-            db.execute("INSERT INTO candidates(vacancy_id,filename,redacted_text,original_file,original_mime,applicant_name,source) VALUES(?,?,?,?,?,?,'reclutamiento')",
-                       (vid, f.filename, redact(text), data, f.content_type, os.path.splitext(f.filename)[0][:80]))
+            # Guardar el texto SIN redaction de inmediato; se anonimizará cuando el agente se ejecute
+            import hashlib
+            cv_hash = hashlib.sha256(data).hexdigest()
+            db.execute("INSERT INTO candidates(vacancy_id,filename,redacted_text,original_file,original_mime,applicant_name,source,cv_hash) VALUES(?,?,?,?,?,?,'reclutamiento',?)",
+                       (vid, f.filename, text, data, f.content_type, os.path.splitext(f.filename)[0][:80], cv_hash))
             ok += 1
-        audit(db, user["id"], "cv_cargados", "vacante", vid, f"{ok} cargados, {bad} rechazados; declaración de consentimiento aceptada")
-    msg = f"{ok} CV cargado(s) y anonimizado(s)." + (f" {bad} no se pudieron leer." if bad else "")
+        audit(db, user["id"], "cv_cargados", "vacante", vid, f"{ok} CV cargado(s).")
+    msg = f"{ok} CV cargado(s)." + (f" {bad} no se pudieron leer." if bad else "")
     return go(request, f"/vacancies/{vid}", msg)
 
 
@@ -320,10 +385,11 @@ def run(request: Request, vid: int, user=Depends(require("reclutador"))):
         v = _own_vacancy(db, vid, user)
         if v["status"] == "cerrada":
             return go(request, f"/vacancies/{vid}", "La vacante está cerrada. Reábrela para ejecutar el agente.")
-    n = run_agent(vid)
+    result = run_agent(vid)
+    n = result["n_processed"]
     with get_db() as db:
         audit(db, user["id"], "agente_ejecutado", "vacante", vid, f"{n} candidatos evaluados")
-    return go(request, f"/vacancies/{vid}", f"El agente evaluó {n} candidato(s).")
+    return go(request, f"/vacancies/{vid}", f"El agente evaluó {n} candidato(s). (cache: {result['used_cache']}, {result['elapsed_seconds']}s)")
 
 
 @app.post("/vacancies/{vid}/delete-cvs")
@@ -365,6 +431,16 @@ def delete_candidate(request: Request, cid: int, user=Depends(require("reclutado
     return go(request, f"/vacancies/{c['vacancy_id']}", "CV eliminado.")
 
 
+@app.get("/candidates/{cid}/original")
+def candidate_original(cid: int, user=Depends(require("reclutador"))):
+    with get_db() as db:
+        c = db.execute("SELECT * FROM candidates WHERE id=?", (cid,)).fetchone()
+        if c["original_file"] is None:
+            raise HTTPException(404, "No hay archivo original disponible.")
+        return Response(c["original_file"], media_type=c["original_mime"] or "application/octet-stream",
+                        headers={"Content-Disposition": f"attachment; filename={c['filename']}"})
+
+
 # ---------- jefe de área ----------
 @app.get("/shortlists/{vid}")
 def shortlist_view(request: Request, vid: int, user=Depends(require("jefe"))):
@@ -391,60 +467,6 @@ def decision(request: Request, cid: int, decision: str = Form(...), decision_not
                    (decision, decision_note.strip()[:500], cid))
         audit(db, user["id"], "decision_jefe", "candidato", cid, decision)
     return go(request, "/dashboard", "Decisión registrada.")
-
-
-# ---------- evaluación SUS ----------
-@app.get("/sus")
-def sus_form(request: Request, user=Depends(require("reclutador", "jefe"))):
-    with get_db() as db:
-        done = db.execute("SELECT * FROM sus_responses WHERE user_id=?", (user["id"],)).fetchone()
-    return page(request, "sus.html", items=ITEMS, done=done, profile=PROFILE[user["role"]],
-                unlocked=sus_unlocked(user), task=task_state(user))
-
-
-@app.post("/sus")
-async def sus_submit(request: Request, user=Depends(require("reclutador", "jefe"))):
-    form = await request.form()
-    if not sus_unlocked(user):
-        return go(request, "/sus", "Completa primero la tarea para habilitar el cuestionario.")
-    try:
-        answers = [int(form.get(f"q{i}", "")) for i in range(1, 11)]
-        score = sus_score(answers)
-    except ValueError:
-        return go(request, "/sus", "Responde los 10 ítems antes de enviar.")
-    if not form.get("consent"):
-        return go(request, "/sus", "Debes aceptar el consentimiento informado.")
-    with get_db() as db:
-        if db.execute("SELECT 1 FROM sus_responses WHERE user_id=?", (user["id"],)).fetchone():
-            return go(request, "/sus", "Ya enviaste tu evaluación. ¡Gracias!")
-        db.execute("INSERT INTO sus_responses(user_id,profile,answers,score,experience,comment) VALUES(?,?,?,?,?,?)",
-                   (user["id"], PROFILE[user["role"]], json.dumps(answers), score,
-                    str(form.get("experience", ""))[:60], str(form.get("comment", ""))[:600]))
-    return go(request, "/sus", "¡Gracias! Tu evaluación fue registrada.")
-
-
-def _sus_rows():
-    with get_db() as db:
-        return db.execute("SELECT * FROM sus_responses ORDER BY id").fetchall()
-
-
-@app.get("/admin/sus")
-def admin_sus(request: Request, user=Depends(require("admin"))):
-    rows = _sus_rows()
-    groups = {p: [r["score"] for r in rows if r["profile"] == p] for p in PROFILE.values()}
-    stats = {p: describe(s) for p, s in groups.items()}
-    return page(request, "admin_sus.html", rows=rows, stats=stats)
-
-
-@app.get("/admin/sus.csv")
-def admin_sus_csv(user=Depends(require("admin"))):
-    buf = io.StringIO()
-    w = csv.writer(buf)
-    w.writerow(["participante", "perfil", "puntaje_sus", "categoria", "experiencia", *[f"item_{i}" for i in range(1, 11)]])
-    for i, r in enumerate(_sus_rows(), 1):
-        w.writerow([f"P{i:03d}", r["profile"], r["score"], category(r["score"]), r["experience"], *json.loads(r["answers"])])
-    return Response(buf.getvalue(), media_type="text/csv",
-                    headers={"Content-Disposition": "attachment; filename=sus_respuestas.csv"})
 
 
 # ---------- administración de cuentas (sin necesidad de consola) ----------
@@ -550,6 +572,59 @@ def admin_audit(request: Request, user=Depends(require("admin"))):
     with get_db() as db:
         rows = db.execute("SELECT a.*, u.email FROM audit_log a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 200").fetchall()
     return page(request, "admin_audit.html", rows=rows)
+
+
+@app.get("/admin/sus")
+def admin_sus(request: Request, user=Depends(require("admin"))):
+    with get_db() as db:
+        rows = db.execute("""
+            SELECT sr.user_id, u.name, u.email, u.role, sr.score, sr.category, sr.answers_json, sr.created_at
+            FROM sus_responses sr JOIN users u ON u.id=sr.user_id ORDER BY sr.id""").fetchall()
+    from .sus import describe
+    by_profile = {}
+    for r in rows:
+        key = "Personal de reclutamiento" if r["role"] == "reclutador" else "Jefes de área"
+        if key not in by_profile:
+            by_profile[key] = []
+        by_profile[key].append(r["score"])
+    stats = {p: describe(scores) for p, scores in by_profile.items()}
+    # Asegurar que ambos perfiles existan
+    for p in ("Personal de reclutamiento", "Jefes de área"):
+        if p not in stats:
+            stats[p] = describe([])
+    return page(request, "admin_sus.html", stats=stats)
+
+
+@app.get("/admin/sus.csv")
+def admin_sus_csv(request: Request, user=Depends(require("admin"))):
+    with get_db() as db:
+        rows = db.execute("""
+            SELECT sr.user_id, u.name, u.email, u.role, sr.score, sr.category, sr.answers_json, sr.created_at
+            FROM sus_responses sr JOIN users u ON u.id=sr.user_id ORDER BY sr.id""").fetchall()
+    import csv
+    import io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["id", "nombre", "correo", "perfil", "puntaje", "categoria", "respuestas", "fecha"])
+    profile_map = {"reclutador": "Personal de reclutamiento", "jefe": "Jefes de área"}
+    for i, r in enumerate(rows, 1):
+        w.writerow([f"P{i:03d}", r["name"], r["email"], profile_map.get(r["role"], r["role"]), f"{r['score']:.1f}", r["category"], r["answers_json"], r["created_at"]])
+    return Response(buf.getvalue(), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=sus_respuestas.csv", "Cache-Control": "no-store"})
+
+
+@app.post("/admin/vacancies/{vid}/delete")
+def admin_delete_vacancy(request: Request, vid: int, user=Depends(require("admin"))):
+    with get_db() as db:
+        # Verificar que la vacante existe y pertenece a esta admin's company
+        v = db.execute("SELECT * FROM vacancies WHERE id=? AND company_id=(SELECT company_id FROM users WHERE id=?)", (vid, user["id"])).fetchone()
+        if not v:
+            raise HTTPException(404, "Vacante no encontrada o no tienes permiso.")
+        # Eliminar todos los CVs y candidatos asociados
+        db.execute("DELETE FROM candidates WHERE vacancy_id=?", (vid,))
+        # Eliminar la vacante
+        db.execute("DELETE FROM vacancies WHERE id=?", (vid,))
+        audit(db, user["id"], "vacante_eliminada", "vacante", vid, f"Vacante '{v['title']}' eliminada por administrador")
+    return go(request, "/admin/users", "Vacante eliminada exitosamente.")
 
 
 app.include_router(public.router)

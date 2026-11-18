@@ -1,28 +1,27 @@
-{% extends "base.html" %}{% block title %}Evaluación SUS{% endblock %}
+{% extends "base.html" %}{% block title %}Cuestionario SUS · LocalMatch{% endblock %}
 {% block content %}
-<h1>Evaluación de usabilidad</h1>
-<p class="sub">Cuestionario System Usability Scale (SUS) · Perfil: {{ profile }}</p>
-{% if not unlocked and not done %}
-<div class="card">
-  <h2>Primero completa tu tarea</h2>
-  <p class="hint">El cuestionario se habilita al terminar estos pasos con el agente.</p>
-  {% for label, ok in task.steps %}<div class="row" style="margin:6px 0"><span class="badge {{ 'ok' if ok else '' }}">{{ '✓' if ok else loop.index }}</span><span>{{ label }}</span></div>{% endfor %}
-  <p><a class="btn" href="/dashboard">Ir a mi tarea</a></p>
+<div class="center card" style="max-width:720px">
+  <h1>Cuestionario de Usabilidad (SUS)</h1>
+  <p class="sub">Por favor, indica tu nivel de acuerdo con cada afirmación (1 = Totalmente en desacuerdo, 5 = Totalmente de acuerdo).</p>
+  <form method="post" action="/sus">
+    {% for item in items %}
+    {% set i = loop.index %}
+    <fieldset class="sus-item" style="border:0;margin:16px 0;padding:0">
+      <legend style="font-weight:500;margin-bottom:8px">{{ i }}. {{ item }}</legend>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        {% for v in range(1, 6) %}
+        <label style="display:flex;align-items:center;gap:4px;font-weight:400;cursor:pointer">
+          <input type="radio" name="q{{ i }}" value="{{ v }}" required {% if v == 3 %}checked{% endif %}> {{ v }}
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;cursor:pointer">
+      <input type="checkbox" name="consent" value="1" required> Acepto que mis respuestas se usen para el estudio de usabilidad (anónimo).
+    </label>
+    <p><button class="btn" style="width:100%;margin-top:18px">Enviar</button></p>
+  </form>
+  <p class="hint" style="text-align:center;margin-top:12px"><a href="/dashboard">Volver al inicio</a></p>
 </div>
-{% elif done %}
-<div class="card empty"><div class="big">¡Gracias!</div><p>Tu evaluación ya fue registrada. Puedes cerrar esta página.</p></div>
-{% else %}
-<form class="card" method="post" action="/sus">
-  <p class="hint">Después de usar LocalMatch en una tarea real, indica qué tan de acuerdo estás con cada afirmación: 1 = totalmente en desacuerdo, 5 = totalmente de acuerdo.</p>
-  {% for t in items %}{% set i = loop.index %}
-  <div class="likert"><div><b>{{ i }}.</b> {{ t }}</div>
-    <div class="opts">{% for n in range(1,6) %}<label><input type="radio" name="q{{ i }}" value="{{ n }}" required>{{ n }}</label>{% endfor %}</div></div>
-  {% endfor %}
-  <label>¿Cuánta experiencia tienes con herramientas de IA en tu trabajo?</label>
-  <select name="experience"><option>Ninguna</option><option>Poca</option><option>Media</option><option>Mucha</option></select>
-  <label>Comentario <span class="hint">(opcional)</span></label><textarea name="comment"></textarea>
-  <label style="font-weight:500"><input type="checkbox" name="consent" value="1" style="width:auto;margin-right:8px">Acepto participar de forma voluntaria. Mis respuestas se usarán de forma anónima con fines académicos y no se publicará mi identidad.</label>
-  <p><button class="btn">Enviar evaluación</button></p>
-</form>
-{% endif %}
 {% endblock %}

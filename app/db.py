@@ -58,8 +58,9 @@ def schema(pg: bool) -> list[str]:
           shortlisted INTEGER NOT NULL DEFAULT 0, decision TEXT, decision_note TEXT, human_note TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, {_cols('candidates', pg)})""",
         f"""CREATE TABLE IF NOT EXISTS sus_responses(
-          id {pk}, user_id INTEGER UNIQUE NOT NULL, profile TEXT NOT NULL, answers TEXT NOT NULL,
-          score {real} NOT NULL, experience TEXT, comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
+          id {pk}, user_id INTEGER UNIQUE NOT NULL, role TEXT, answers_json TEXT,
+          score {real} NOT NULL, category TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          profile TEXT, answers TEXT)""",
         f"""CREATE TABLE IF NOT EXISTS audit_log(
           id {pk}, user_id INTEGER, action TEXT NOT NULL, entity TEXT, entity_id INTEGER, detail TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",

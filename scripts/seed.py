@@ -27,14 +27,16 @@ def main():
     with get_db() as db:
         creds = []
         empresa = get_or_create_company(db, "Empresa de práctica")
-        for email, name, role in [
-            ("admin@localmatch.local", "Equipo de investigación", "admin"),
-            ("reclutadora@localmatch.local", "Rosa Reclutadora", "reclutador"),
-            ("jefe@localmatch.local", "Julio Jefe de Área", "jefe"),
+        for email, name, role, password in [
+            ("admin@localmatch.local", "Equipo de investigación", "admin", None),
+            ("reclutadora@localmatch.local", "Rosa Reclutadora", "reclutador", None),
+            ("jefe@localmatch.local", "Julio Jefe de Área", "jefe", None),
+            ("postulante@demo.com", "Postulante Demo", "postulante", "demo12345"),
         ]:
             if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
                 continue
-            creds.append((email, make_user(db, email, name, role, company_id=None if role == 'admin' else empresa), role))
+            cid = None if role == 'admin' else (empresa if role != 'postulante' else None)
+            creds.append((email, make_user(db, email, name, role, password=password, company_id=cid), role))
         if demo:
             owner = db.execute("SELECT id FROM users WHERE email='reclutadora@localmatch.local'").fetchone()
             boss = db.execute("SELECT id FROM users WHERE email='jefe@localmatch.local'").fetchone()
